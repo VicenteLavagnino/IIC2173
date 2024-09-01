@@ -1,12 +1,17 @@
 import paho.mqtt.client as mqtt
 import asyncio
+import os
 from database import save_fixture
+from dotenv import load_dotenv
 
-# MQTT Settings
-host = "broker.iic2173.org"
-port = 9000
-user = "students"
-password = "iic2173-2024-2-students"
+# Cargar las variables de entorno
+load_dotenv()
+
+# MQTT Settings con variables de entorno
+host = os.getenv("MQTT_HOST")
+port = int(os.getenv("MQTT_PORT"))
+user = os.getenv("MQTT_USER")
+password = os.getenv("MQTT_PASSWORD")
 
 loop = asyncio.get_event_loop()
 
@@ -25,7 +30,7 @@ def run_mqtt_client():
     client.on_connect = on_connect
     client.on_message = on_message
     client.username_pw_set(user, password)
-    client.connect(host, int(port), 60)
+    client.connect(host, port, 60)
     client.loop_forever()
 
 if __name__ == "__main__":

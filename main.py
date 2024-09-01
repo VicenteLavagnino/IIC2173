@@ -34,8 +34,6 @@ async def get_fixtures(page: int = Query(1, ge=1), count: int = Query(25, ge=1),
     return jsonable_encoder(fixtures_list, custom_encoder={ObjectId: str})
 
 
-    
-
 
 
 @app.get("/fixtures/{fixture_id}")

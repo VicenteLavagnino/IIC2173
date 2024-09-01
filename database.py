@@ -1,8 +1,12 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 import json
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Configuración de la base de datos MongoDB
-mongo_url = "mongodb+srv://vicentelavagnino:vicente1559@e0.dhcuf.mongodb.net/?retryWrites=true&w=majority&appName=E0"
+mongo_url = os.getenv("MONGO_URL")
 mongo_client = AsyncIOMotorClient(mongo_url)
 db = mongo_client["futbol_db"]
 collection = db["partidos"]
