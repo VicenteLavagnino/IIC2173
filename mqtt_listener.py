@@ -4,7 +4,6 @@ import os
 from database import save_fixture
 from dotenv import load_dotenv
 
-# Cargar las variables de entorno
 load_dotenv()
 
 # MQTT Settings con variables de entorno

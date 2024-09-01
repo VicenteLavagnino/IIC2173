@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Query
 from datetime import datetime
 from motor.motor_asyncio import AsyncIOMotorClient
-from database import collection  # Ensure this import is correctly referencing your MongoDB collection
+from database import collection
 from fastapi.encoders import jsonable_encoder
 from bson import ObjectId
 
@@ -9,7 +9,7 @@ app = FastAPI()
 
 @app.get("/")
 async def root():
-    return {"message": "Football Fixtures API"}
+    return {"message": "Hola! Bienvenido a la API de la entrega 0 - IIC2413"}
 
 @app.get("/fixtures")
 async def get_fixtures(page: int = Query(1, ge=1), count: int = Query(25, ge=1), home: str = None, visit: str = None, date: datetime = None):
@@ -35,7 +35,6 @@ async def get_fixtures(page: int = Query(1, ge=1), count: int = Query(25, ge=1),
 
 
 
-
 @app.get("/fixtures/{fixture_id}")
 async def get_fixture(fixture_id: str):
     data = await collection.find_one({"_id": ObjectId(fixture_id)})
@@ -44,9 +43,6 @@ async def get_fixture(fixture_id: str):
         return jsonable_encoder(data, custom_encoder={ObjectId: str})
     else:
         return {"error": "Fixture not found"}
-
-
-
 
 
 if __name__ == "__main__":
