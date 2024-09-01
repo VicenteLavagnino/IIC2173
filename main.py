@@ -9,7 +9,7 @@ app = FastAPI()
 
 @app.get("/")
 async def root():
-    return {"message": "Hola! Bienvenido a la API de la entrega 0 - IIC2413"}
+    return {"message": "Hola! Bienvenido a la API de la entrega 0 - IIC2173"}
 
 @app.get("/fixtures")
 async def get_fixtures(page: int = Query(1, ge=1), count: int = Query(25, ge=1), home: str = None, visit: str = None, date: datetime = None):
