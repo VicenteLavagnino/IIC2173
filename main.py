@@ -4,7 +4,6 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from database import collection  # Ensure this import is correctly referencing your MongoDB collection
 from fastapi.encoders import jsonable_encoder
 from bson import ObjectId
-import logging
 
 app = FastAPI()
 
@@ -13,12 +12,30 @@ async def root():
     return {"message": "Football Fixtures API"}
 
 @app.get("/fixtures")
-async def get_fixtures(page: int = Query(1, ge=1), count: int = Query(25, ge=1)):
+async def get_fixtures(page: int = Query(1, ge=1), count: int = Query(25, ge=1), home: str = None, visit: str = None, date: datetime = None):
     skip = (page - 1) * count
-    cursor = collection.find({}).skip(skip).limit(count)
+    query = {}
+
+    if home:
+        query["teams.home.name"] = home
+        query["fixture.date"] = {"$gte": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")}
+    
+    if visit:
+        query["teams.away.name"] = visit
+        query["fixture.date"] = {"$gte": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")}
+
+    if date:
+        query["fixture.date"] = {"$gte": date.strftime("%Y-%m-%dT%H:%M:%S")}
+
+
+    cursor = collection.find(query).skip(skip).limit(count)
     fixtures_list = await cursor.to_list(length=count)
-    print(f"Page: {page}, Count: {count}, Found {len(fixtures_list)} fixtures")
+
     return jsonable_encoder(fixtures_list, custom_encoder={ObjectId: str})
+
+
+    
+
 
 
 @app.get("/fixtures/{fixture_id}")
