@@ -1,22 +1,35 @@
-### Building and running your application
+# README para Proyecto IIC2173
 
-When you're ready, start your application by running:
-`docker compose up --build`.
+## Consideraciones Generales
+Se realizó el proyecto en un servidor EC2 de AWS, utilizando FastApi como framework para la api y Nginx como servidor web. Se utilizó certbot para obtener un certificado SSL y se configuró Nginx para redirigir el tráfico HTTP a HTTPS. Se utilizó Docker para correr la aplicación.
 
-Your application will be available at http://localhost:8000.
+En cuanto a referencia de código externo, se utilizaron los links provistos en el enunciado del proyecto para la configuración, además de la documentación oficial del stack utilizado y recomendaciones de otros estudiantes en el canal de Slack sobre librerias y otras herramientas.
 
-### Deploying your application to the cloud
+https://www.digitalocean.com/community/tutorials/how-to-configure-nginx-as-a-reverse-proxy-on-ubuntu-22-04
+https://stackoverflow.com/questions/73482467/virtual-environment-for-fastapi
 
-First, build your image, e.g.: `docker build -t myapp .`.
-If your cloud uses a different CPU architecture than your development
-machine (e.g., you are on a Mac M1 and your cloud provider is amd64),
-you'll want to build the image for that platform, e.g.:
-`docker build --platform=linux/amd64 -t myapp .`.
+En cuanto al uso de inteligencia artificial, se utilizó Chat GPT para la instalacion de cerbot y nginx puesto que no resultó incicialmente la instalación de la ayudantía.
 
-Then, push it to your registry, e.g. `docker push myregistry.com/myapp`.
+Por otra parte, dentro del repositorio, se utilizó Copilot para la generación de archivos de Dockerfile y compose.yaml, además del parseo de datos en database.py junto con el filtro para la api en main.py.
 
-Consult Docker's [getting started](https://docs.docker.com/go/get-started-sharing/)
-docs for more detail on building and pushing.
+## Nombre del Dominio
 
-### References
-* [Docker's Python guide](https://docs.docker.com/language/python/)
+```bash
+iic2173.lavagnino.cl
+ip: 18.116.175.145
+```
+
+
+## Método de Acceso al Servidor
+
+Para acceder al servidor, se debe utilizar SSH. Las instrucciones específicas y las claves `.pem` no se incluyen aquí por motivos de seguridad, pero pueden ser proporcionadas de manera segura cuando sea necesario.
+
+### Comandos de Acceso SSH
+
+```bash
+ssh -i "Keypair-E0VicenteLavagnino.pem" ubuntu@ec2-18-116-175-145.us-east-2.compute.amazonaws.com
+```
+
+### Puntos Logrados
+
+En cuanto a los requisitos funcionales y no funcionales, se lograron todos los puntos de la parte mínima. En cuanto a los requisitos variables, se lograron todos los requisitos de la primera sección (HTTPS).
