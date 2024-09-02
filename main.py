@@ -18,11 +18,9 @@ async def get_fixtures(page: int = Query(1, ge=1), count: int = Query(25, ge=1),
 
     if home:
         query["teams.home.name"] = home
-        query["fixture.date"] = {"$gte": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")}
     
     if visit:
         query["teams.away.name"] = visit
-        query["fixture.date"] = {"$gte": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")}
 
     if date:
         query["fixture.date"] = {"$gte": date.strftime("%Y-%m-%dT%H:%M:%S")}
