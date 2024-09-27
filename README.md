@@ -7,6 +7,8 @@ En cuanto a referencia de código externo, se utilizaron los links provistos en 
 
 https://www.digitalocean.com/community/tutorials/how-to-configure-nginx-as-a-reverse-proxy-on-ubuntu-22-04
 https://stackoverflow.com/questions/73482467/virtual-environment-for-fastapi
+https://auth0.com/blog/build-and-secure-fastapi-server-with-auth0/
+
 
 En cuanto al uso de inteligencia artificial, se utilizó Chat GPT para la instalacion de cerbot y nginx puesto que no resultó incicialmente la instalación de la ayudantía.
 
