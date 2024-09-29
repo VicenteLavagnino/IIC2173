@@ -12,6 +12,11 @@ from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
 
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+
+
 load_dotenv()  # Carga las variables de entorno desde el archivo .env
 
 app = FastAPI()
@@ -20,6 +25,7 @@ app = FastAPI()
 AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN")
 AUTH0_CLIENT_ID = os.getenv("AUTH0_CLIENT_ID")
 AUTH0_CLIENT_SECRET = os.getenv("AUTH0_CLIENT_SECRET")
+AUTH0_AUDIENCE = os.getenv("AUTH0_AUDIENCE")
 ALGORITHMS = ["RS256"]
 
 oauth2_scheme = OAuth2AuthorizationCodeBearer(
@@ -31,20 +37,40 @@ class User(BaseModel):
     email: str
     wallet: float = 0
 
-# Función para obtener la clave pública de Auth0
-def get_auth0_public_key():
+# Función para obtener las claves públicas de Auth0
+def get_auth0_jwks():
     response = requests.get(f"https://{AUTH0_DOMAIN}/.well-known/jwks.json")
     jwks = response.json()
-    return jwt.algorithms.RSAAlgorithm.from_jwk(jwks["keys"][0])
+    return jwks
 
-# Función para verificar el token JWT
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     try:
-        public_key = get_auth0_public_key()
-        payload = jwt.decode(token, public_key, algorithms=ALGORITHMS, audience=AUTH0_CLIENT_ID)
-        return payload
+        jwks = get_auth0_jwks()
+        unverified_header = jwt.get_unverified_header(token)
+        rsa_key = {}
+        for key in jwks["keys"]:
+            if key["kid"] == unverified_header["kid"]:
+                rsa_key = {
+                    "kty": key["kty"],
+                    "kid": key["kid"],
+                    "use": key["use"],
+                    "n": key["n"],
+                    "e": key["e"]
+                }
+        if rsa_key:
+            payload = jwt.decode(
+                token,
+                rsa_key,
+                algorithms=ALGORITHMS,
+                audience=AUTH0_AUDIENCE,
+                issuer=f"https://{AUTH0_DOMAIN}/"
+            )
+            return payload
+        else:
+            raise HTTPException(status_code=401, detail="Invalid token")
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
 
 @app.get("/")
 async def root():
@@ -90,6 +116,12 @@ async def create_user(user: User, current_user: dict = Depends(get_current_user)
     user_data["auth0_id"] = current_user["sub"]
     result = await users_collection.insert_one(user_data)
     return {"message": "User created successfully", "id": str(result.inserted_id)}
+
+@app.get("/users")
+async def get_users(current_user: dict = Depends(get_current_user)):
+    cursor = users_collection.find({})
+    users_list = await cursor.to_list(length=100)
+    return jsonable_encoder(users_list, custom_encoder={ObjectId: str})
 
 @app.get("/users/me")
 async def get_current_user_info(current_user: dict = Depends(get_current_user)):
