@@ -1,6 +1,7 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 import json
 import os
+import bcrypt  # Para manejar el hashing de las contraseñas
 from dotenv import load_dotenv
 from bson import ObjectId
 
@@ -38,19 +39,27 @@ async def save_fixture(data):
         print(f"Error saving data to MongoDB: {e}")
         print(f"Problematic data: {data[:200]}")
 
-
 # Obtener usuario por email
 async def get_user_by_email(email: str):
     return await users_collection.find_one({"email": email})
 
-# Crear un nuevo usuario con un wallet inicial
-async def create_user(email: str):
+# Crear un nuevo usuario con un wallet inicial y clave de usuario
+async def create_user(email: str, password: str):
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
     user = {
         "email": email,
+        "password": hashed_password,  # Guardamos la clave como hash
         "wallet_balance": 0  # Inicia con 0 en la billetera
     }
     result = await users_collection.insert_one(user)
     return user
+
+# Verificar la contraseña de un usuario
+async def verify_user_password(email: str, password: str):
+    user = await get_user_by_email(email)
+    if user and bcrypt.checkpw(password.encode('utf-8'), user["password"]):
+        return True
+    return False
 
 # Actualizar el saldo del wallet del usuario
 async def update_wallet_balance(email: str, amount: int):
@@ -60,3 +69,13 @@ async def update_wallet_balance(email: str, amount: int):
         await users_collection.update_one({"email": email}, {"$set": {"wallet_balance": new_balance}})
         return new_balance
     return None
+
+# Obtener todos los usuarios
+async def get_all_users():
+    users_cursor = users_collection.find({})
+    users = await users_cursor.to_list(length=None)  # Obtener todos los usuarios en una lista
+    for user in users:
+        user["_id"] = str(user["_id"])
+        user["password"] = str(user["password"])
+        user["wallet_balance"] = str(user["wallet_balance"])
+    return users

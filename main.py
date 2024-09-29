@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from dotenv import load_dotenv
 import requests
 import os
+from database import get_all_users
 
 # Cargar las variables de entorno
 load_dotenv()
@@ -128,6 +129,15 @@ async def get_fixture(fixture_id: str, current_user: dict = Depends(verify_token
         return jsonable_encoder(data, custom_encoder={ObjectId: str})
     else:
         return {"error": "Fixture not found"}
+
+
+@app.get("/users")
+async def get_users():
+    users = await get_all_users()
+    if not users:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No existen usuarios registrados :(")
+    
+    return users
 
 if __name__ == "__main__":
     import uvicorn

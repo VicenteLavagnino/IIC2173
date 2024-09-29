@@ -4,3 +4,4 @@ paho-mqtt
 gunicorn
 motor
 requests
+bcrypt
