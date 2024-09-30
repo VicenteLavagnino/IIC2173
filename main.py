@@ -21,6 +21,14 @@ load_dotenv()  # Carga las variables de entorno desde el archivo .env
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=[""],  # Métodos permitidos
+    allow_headers=["*"],  # Headers permitidos
+)
+
 # Configuración de Auth0
 AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN")
 AUTH0_CLIENT_ID = os.getenv("AUTH0_CLIENT_ID")
