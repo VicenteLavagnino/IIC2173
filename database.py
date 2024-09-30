@@ -79,7 +79,6 @@ async def handle_request(payload):
         fixture_id = data.get('fixture_id')
         result = data.get('result')
         
-        # Guardar la solicitud en la base de datos
         await bonds_collection.insert_one({
             'request_id': request_id,
             'fixture_id': fixture_id,
@@ -168,6 +167,7 @@ async def process_bonds_for_fixture(fixture_id, result):
                 {'_id': bond['_id']},
                 {'$set': {'status': 'lost'}}
             )
+
 async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
     user = await get_user_by_auth0_id(auth0_id)
     fixture_id_int = int(fixture_id)
@@ -188,7 +188,7 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
     
     request_message = {
         "request_id": request_id,
-        "group_id": "8",  # Reemplaza con tu número de grupo
+        "group_id": "8",  
         "fixture_id": fixture_id,
         "league_name": fixture["league"]["name"],
         "round": fixture["league"]["round"],

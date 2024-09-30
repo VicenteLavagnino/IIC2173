@@ -152,13 +152,6 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
         return jsonable_encoder(user, custom_encoder={ObjectId: str})
     raise HTTPException(status_code=404, detail="User not found")
 
-recent_messages = []
-
-@app.get("/recent_broker_messages")
-async def get_recent_broker_messages(current_user: dict = Depends(get_current_user)):
-    return recent_messages[-10:]  # Retorna los últimos 10 mensajes
-
-
 @app.post("/buy_bond")
 async def buy_bond_endpoint(bond: BondPurchase = Body(...), current_user: dict = Depends(get_current_user)):
     result = await buy_bond(current_user['sub'], bond.fixture_id, bond.result, bond.amount)
