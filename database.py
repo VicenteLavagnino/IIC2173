@@ -2,6 +2,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import json
 import os
 from dotenv import load_dotenv
+from bson import ObjectId
 
 load_dotenv()
 
@@ -11,6 +12,10 @@ mongo_client = AsyncIOMotorClient(mongo_url)
 db = mongo_client["futbol_db"]
 collection = db["partidos"]
 
+# Colección de usuarios
+users_collection = db["users"]
+
+# Guardar fixtures en la base de datos
 async def save_fixture(data):
     try:
         data = data.strip('"')
@@ -32,3 +37,26 @@ async def save_fixture(data):
     except Exception as e:
         print(f"Error saving data to MongoDB: {e}")
         print(f"Problematic data: {data[:200]}")
+
+
+# Obtener usuario por email
+async def get_user_by_email(email: str):
+    return await users_collection.find_one({"email": email})
+
+# Crear un nuevo usuario con un wallet inicial
+async def create_user(email: str):
+    user = {
+        "email": email,
+        "wallet_balance": 0  # Inicia con 0 en la billetera
+    }
+    result = await users_collection.insert_one(user)
+    return user
+
+# Actualizar el saldo del wallet del usuario
+async def update_wallet_balance(email: str, amount: int):
+    user = await get_user_by_email(email)
+    if user:
+        new_balance = user["wallet_balance"] + amount
+        await users_collection.update_one({"email": email}, {"$set": {"wallet_balance": new_balance}})
+        return new_balance
+    return None
