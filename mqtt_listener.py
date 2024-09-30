@@ -1,7 +1,7 @@
 import paho.mqtt.client as mqtt
 import asyncio
 import os
-from database import save_fixture
+from database import save_fixture, handle_validation, handle_history
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -17,12 +17,23 @@ loop = asyncio.get_event_loop()
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code " + str(rc))
     client.subscribe("fixtures/info")
+    client.subscribe("fixtures/requests")
+    client.subscribe("fixtures/validation")
+    client.subscribe("fixtures/history")
 
 def on_message(client, userdata, msg):
+    topic = msg.topic
     payload = msg.payload.decode()
-    print("Received data type:", type(payload))
-    print("Received data:", payload[:200])
-    asyncio.run_coroutine_threadsafe(save_fixture(payload), loop)
+    print(f"Received message on topic: {topic}")
+    #print(f"Message payload: {payload[:200]}...")
+    if topic == "fixtures/info":
+        asyncio.run_coroutine_threadsafe(save_fixture(payload), loop)
+    elif topic == "fixtures/requests":
+        pass
+    elif topic == "fixtures/validation":
+        asyncio.run_coroutine_threadsafe(handle_validation(payload), loop)
+    elif topic == "fixtures/history":
+        asyncio.run_coroutine_threadsafe(handle_history(payload), loop)
 
 def run_mqtt_client():
     client = mqtt.Client()
