@@ -1,8 +1,8 @@
-from fastapi import FastAPI, Query, Depends, HTTPException
+from fastapi import FastAPI, Query, Depends, HTTPException, Body
 from fastapi.security import OAuth2AuthorizationCodeBearer
 from datetime import datetime, timedelta
 from motor.motor_asyncio import AsyncIOMotorClient
-from database import collection, users_collection, buy_bond
+from database import collection, users_collection, buy_bond  # Mantener la importación completa de develop
 from fastapi.encoders import jsonable_encoder
 from bson import ObjectId
 from jose import jwt
@@ -12,8 +12,9 @@ from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import Body
+import logging
 
+logging.basicConfig(level=logging.DEBUG)
 
 load_dotenv()  # Carga las variables de entorno desde el archivo .env
 
@@ -51,7 +52,6 @@ class BondPurchase(BaseModel):
 class FundRequest(BaseModel):
     amount: float
 
-
 # Función para obtener las claves públicas de Auth0
 def get_auth0_jwks():
     response = requests.get(f"https://{AUTH0_DOMAIN}/.well-known/jwks.json")
@@ -86,10 +86,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-
 @app.get("/")
 async def root():
-    return {"message": "Hola! Bienvenido a la API de la entrega 1- IIC2173"}
+    return {"message": "Hola! Bienvenido a la API de la entrega 1- IIC2173"}  # Usando el mensaje de develop
 
 @app.get("/fixtures")
 async def get_fixtures(
@@ -114,14 +113,13 @@ async def get_fixtures(
         query["fixture.date"] = {"$gte": start_date.strftime("%Y-%m-%dT%H:%M:%S"), "$lt": end_date.strftime("%Y-%m-%dT%H:%M:%S")}
         query["fixture.status.long"] = "Not Started"
 
-    total = await collection.count_documents(query) # Agregado para merge
+    total = await collection.count_documents(query)  # Calcular el total de documentos
     cursor = collection.find(query).skip(skip).limit(count)
     fixtures_list = await cursor.to_list(length=count)
     return {
-    "fixtures": jsonable_encoder(fixtures_list, custom_encoder={ObjectId: str}),
-    "total": total,
-}
-
+        "fixtures": jsonable_encoder(fixtures_list, custom_encoder={ObjectId: str}),
+        "total": total,
+    }
 
 @app.get("/fixtures/{fixture_id}")
 async def get_fixture(fixture_id: str, current_user: dict = Depends(get_current_user)):
@@ -132,12 +130,11 @@ async def get_fixture(fixture_id: str, current_user: dict = Depends(get_current_
 
     # Buscar el fixture usando el campo fixture.id
     data = await collection.find_one({"fixture.id": fixture_id_int})
-
     if data:
         return jsonable_encoder(data, custom_encoder={ObjectId: str})
     else:
         raise HTTPException(status_code=404, detail="Fixture not found")
-    
+
 @app.post("/users")
 async def create_user(user: User, current_user: dict = Depends(get_current_user)):
     user_data = user.dict()

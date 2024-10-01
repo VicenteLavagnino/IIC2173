@@ -28,16 +28,14 @@ async def save_fixture(data):
         data = data.strip('"')
         data = data.replace('\\"', '"')
         parsed_data = json.loads(data)
-        
         if 'fixtures' in parsed_data:
             fixtures = parsed_data['fixtures']
             for fixture in fixtures:
                 result = await collection.insert_one(fixture)
-                #print(f"Fixture saved to MongoDB with id: {result.inserted_id}")
+                print(f"Fixture saved to MongoDB with id: {result.inserted_id}")
         else:
             result = await collection.insert_one(parsed_data)
-            #print(f"Data saved to MongoDB with id: {result.inserted_id}")
-        
+            print(f"Data saved to MongoDB with id: {result.inserted_id}")
     except json.JSONDecodeError as e:
         print(f"Error decoding JSON: {e}")
         print(f"Problematic data: {data[:200]}")
@@ -45,6 +43,14 @@ async def save_fixture(data):
         print(f"Error saving data to MongoDB: {e}")
         print(f"Problematic data: {data[:200]}")
 
+async def save_user(user_data):
+    try:
+        result = await users_collection.insert_one(user_data)
+        print(f"User saved to MongoDB with id: {result.inserted_id}")
+        return result.inserted_id
+    except Exception as e:
+        print(f"Error saving user to MongoDB: {e}")
+        return None
 
 # Obtener usuario por email
 async def get_user_by_email(email: str):
@@ -52,31 +58,6 @@ async def get_user_by_email(email: str):
 
 async def get_user_by_auth0_id(auth0_id: str):
     return await users_collection.find_one({"auth0_id": auth0_id})
-
-async def get_user(auth0_id):
-    try:
-        user = await users_collection.find_one({"auth0_id": auth0_id})
-        return user
-    except Exception as e:
-        print(f"Error retrieving user from MongoDB: {e}")
-        return None
-
-async def update_user_wallet(auth0_id, new_wallet_value):
-    try:
-        result = await users_collection.update_one(
-            {"auth0_id": auth0_id},
-            {"$set": {"wallet": new_wallet_value}}
-        )
-        if result.modified_count > 0:
-            print(f"User wallet updated for auth0_id: {auth0_id}")
-            return True
-        else:
-            print(f"No user found with auth0_id: {auth0_id}")
-            return False
-    except Exception as e:
-        print(f"Error updating user wallet in MongoDB: {e}")
-        return False
-
 
 # Crear un nuevo usuario con un wallet inicial
 async def create_user(email: str):
@@ -102,14 +83,14 @@ async def handle_request(payload):
         request_id = data.get('request_id')
         fixture_id = data.get('fixture_id')
         result = data.get('result')
-        
+
         await bonds_collection.insert_one({
             'request_id': request_id,
             'fixture_id': fixture_id,
             'result': result,
             'status': 'pending'
         })
-        
+
         print(f"Solicitud de bono guardada: {request_id}")
     except json.JSONDecodeError as e:
         print(f"Error decodificando JSON en handle_request: {e}")
@@ -120,13 +101,13 @@ async def handle_validation(payload):
     data = json.loads(payload)
     request_id = data.get('request_id')
     is_valid = data.get('valid')
-    
+
     bond_request = await bonds_collection.find_one({'request_id': request_id})
-    
+
     if not bond_request:
         print(f"No se encontró la solicitud de bono: {request_id}")
         return
-    
+
     if is_valid:
         await bonds_collection.update_one(
             {'request_id': request_id},
@@ -148,10 +129,9 @@ async def handle_validation(payload):
 async def handle_history(payload):
     data = json.loads(payload)
     fixtures = data.get('fixtures', [])
-    
+
     for fixture in fixtures:
         fixture_id = fixture.get('fixture', {}).get('id')
-        # fixture_id = fixture.get('id')
         result = {
             'home': fixture.get('goals', {}).get('home'),
             'away': fixture.get('goals', {}).get('away')
@@ -160,41 +140,39 @@ async def handle_history(payload):
             'long': fixture.get('fixture', {}).get('status', {}).get('long'),
             'short': fixture.get('fixture', {}).get('status', {}).get('short')
         }
-        
+
         await collection.update_one(
             {'id': fixture_id},
             {'$set': {'result': result}}
         )
-        
+
         await process_bonds_for_fixture(fixture_id, result)
-    
+
     print(f"Historial de {len(fixtures)} partidos procesado")
 
 async def process_bonds_for_fixture(fixture_id, result):
     bonds = await bonds_collection.find({'fixture_id': fixture_id, 'status': 'valid'}).to_list(None)
-    
+
     for bond in bonds:
         is_winner = (
             (bond['result'] == 'home' and result['home'] > result['away']) or
             (bond['result'] == 'away' and result['away'] > result['home']) or
             (bond['result'] == '---' and result['home'] == result['away'])
         )
-        
+
         if is_winner:
             fixture = await collection.find_one({"id": fixture_id})
 
             if bond['result'] == '---':
                 bond_result = 'draw'
-            else :
+            else:
                 bond_result = bond['result']
-                
+
             odds = next((value for value in fixture['odds'][0]['values'] if value['value'] == bond_result), None)
-            # odds = next((odd for odd in fixture['odds'] if odd['name'] == bond['result']), None)
             if odds:
                 prize = 1000 * bond['amount'] * float(odds['odd'])
-                # prize = bond['amount'] * float(odds['values'][0]['odd'])
                 await update_wallet_balance(bond['user_auth0_id'], prize)
-            
+
             await bonds_collection.update_one(
                 {'_id': bond['_id']},
                 {'$set': {'status': 'won'}}
@@ -209,23 +187,20 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
     user = await get_user_by_auth0_id(auth0_id)
     fixture_id_int = int(fixture_id)
     fixture = await collection.find_one({"fixture.id": fixture_id_int})
-    
+
     if not user:
-        return {"error": "User  not found"}
+        return {"error": "User not found"}
     if not fixture:
         return {"error": "Fixture not found"}
-    
+
     if user["wallet"] < amount:
         return {"error": "Insufficient funds"}
-    
-    #if fixture['available_bonds'] < 1:
-    #    return {"error": "No bonds available"}
-    
+
     request_id = str(uuid.uuid4())
-    
+
     request_message = {
         "request_id": request_id,
-        "group_id": "8",  
+        "group_id": "8",
         "fixture_id": fixture_id,
         "league_name": fixture["league"]["name"],
         "round": fixture["league"]["round"],
@@ -236,7 +211,7 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
         "quantity": 1,
         "seller": 0
     }
-    
+
     publish.single(
         "fixtures/requests",
         payload=json.dumps(request_message),
@@ -245,7 +220,7 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
         auth={'username': MQTT_USER, 'password': MQTT_PASSWORD}
     )
     print(f"Mensaje enviado al broker: {json.dumps(request_message)}")
-    
+
     await bonds_collection.insert_one({
         'request_id': request_id,
         'user_auth0_id': auth0_id,
@@ -254,12 +229,28 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
         'amount': amount,
         'status': 'pending'
     })
-    
+
     await update_wallet_balance(auth0_id, -amount)
-    
+
     await collection.update_one(
         {"id": fixture_id},
         {"$inc": {"available_bonds": -1}}
     )
-    
+
     return {"message": "Bond purchase request sent", "request_id": request_id}
+
+async def update_user_wallet(auth0_id, new_wallet_value):
+    try:
+        result = await users_collection.update_one(
+            {"auth0_id": auth0_id},
+            {"$set": {"wallet": new_wallet_value}}
+        )
+        if result.modified_count > 0:
+            print(f"User wallet updated for auth0_id: {auth0_id}")
+            return True
+        else:
+            print(f"No user found with auth0_id: {auth0_id}")
+            return False
+    except Exception as e:
+        print(f"Error updating user wallet in MongoDB: {e}")
+        return False
