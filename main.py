@@ -113,9 +113,15 @@ async def get_fixtures(
         end_date = start_date + timedelta(days=1)
         query["fixture.date"] = {"$gte": start_date.strftime("%Y-%m-%dT%H:%M:%S"), "$lt": end_date.strftime("%Y-%m-%dT%H:%M:%S")}
         query["fixture.status.long"] = "Not Started"
+
+    total = await collection.count_documents(query) # Agregado para merge
     cursor = collection.find(query).skip(skip).limit(count)
     fixtures_list = await cursor.to_list(length=count)
-    return jsonable_encoder(fixtures_list, custom_encoder={ObjectId: str})
+    return {
+    "fixtures": jsonable_encoder(fixtures_list, custom_encoder={ObjectId: str}),
+    "total": total,
+}
+
 
 @app.get("/fixtures/{fixture_id}")
 async def get_fixture(fixture_id: str, current_user: dict = Depends(get_current_user)):
