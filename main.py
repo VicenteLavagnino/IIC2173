@@ -1,8 +1,8 @@
-from fastapi import FastAPI, Query, Depends, HTTPException
+from fastapi import FastAPI, Query, Depends, HTTPException, Body
 from fastapi.security import OAuth2AuthorizationCodeBearer
 from datetime import datetime, timedelta
 from motor.motor_asyncio import AsyncIOMotorClient
-from database import collection, users_collection
+from database import collection, users_collection, buy_bond  # Mantener la importación completa de develop
 from fastapi.encoders import jsonable_encoder
 from bson import ObjectId
 from jose import jwt
@@ -12,11 +12,9 @@ from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
-
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
-
 
 load_dotenv()  # Carga las variables de entorno desde el archivo .env
 
@@ -45,6 +43,14 @@ oauth2_scheme = OAuth2AuthorizationCodeBearer(
 class User(BaseModel):
     email: str
     wallet: float = 0
+
+class BondPurchase(BaseModel):
+    fixture_id: str
+    result: str
+    amount: int
+
+class FundRequest(BaseModel):
+    amount: float
 
 # Función para obtener las claves públicas de Auth0
 def get_auth0_jwks():
@@ -80,10 +86,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-
 @app.get("/")
 async def root():
-    return {"message": "Hola! Bienvenido a la API de la entrega 0 - IIC2173"}
+    return {"message": "Hola! Bienvenido a la API de la entrega 1- IIC2173"}  # Usando el mensaje de develop
 
 @app.get("/fixtures")
 async def get_fixtures(
@@ -107,17 +112,28 @@ async def get_fixtures(
         end_date = start_date + timedelta(days=1)
         query["fixture.date"] = {"$gte": start_date.strftime("%Y-%m-%dT%H:%M:%S"), "$lt": end_date.strftime("%Y-%m-%dT%H:%M:%S")}
         query["fixture.status.long"] = "Not Started"
+
+    total = await collection.count_documents(query)  # Calcular el total de documentos
     cursor = collection.find(query).skip(skip).limit(count)
     fixtures_list = await cursor.to_list(length=count)
-    return jsonable_encoder(fixtures_list, custom_encoder={ObjectId: str})
+    return {
+        "fixtures": jsonable_encoder(fixtures_list, custom_encoder={ObjectId: str}),
+        "total": total,
+    }
 
 @app.get("/fixtures/{fixture_id}")
 async def get_fixture(fixture_id: str, current_user: dict = Depends(get_current_user)):
-    data = await collection.find_one({"_id": ObjectId(fixture_id)})
+    try:
+        fixture_id_int = int(fixture_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid fixture ID format")
+
+    # Buscar el fixture usando el campo fixture.id
+    data = await collection.find_one({"fixture.id": fixture_id_int})
     if data:
         return jsonable_encoder(data, custom_encoder={ObjectId: str})
     else:
-        return {"error": "Fixture not found"}
+        raise HTTPException(status_code=404, detail="Fixture not found")
 
 @app.post("/users")
 async def create_user(user: User, current_user: dict = Depends(get_current_user)):
@@ -138,6 +154,23 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
     if user:
         return jsonable_encoder(user, custom_encoder={ObjectId: str})
     raise HTTPException(status_code=404, detail="User not found")
+
+@app.post("/buy_bond")
+async def buy_bond_endpoint(bond: BondPurchase = Body(...), current_user: dict = Depends(get_current_user)):
+    result = await buy_bond(current_user['sub'], bond.fixture_id, bond.result, bond.amount)
+    return result
+
+@app.post("/add_funds")
+async def add_funds(fund_request: FundRequest, current_user: dict = Depends(get_current_user)):
+    user = await users_collection.find_one({"auth0_id": current_user["sub"]})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    new_balance = user["wallet"] + fund_request.amount
+    await users_collection.update_one(
+        {"auth0_id": current_user["sub"]},
+        {"$set": {"wallet": new_balance}}
+    )
+    return {"message": "Funds added successfully", "new_balance": new_balance}
 
 if __name__ == "__main__":
     import uvicorn
