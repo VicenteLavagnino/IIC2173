@@ -53,6 +53,30 @@ async def get_user_by_email(email: str):
 async def get_user_by_auth0_id(auth0_id: str):
     return await users_collection.find_one({"auth0_id": auth0_id})
 
+async def get_user(auth0_id):
+    try:
+        user = await users_collection.find_one({"auth0_id": auth0_id})
+        return user
+    except Exception as e:
+        print(f"Error retrieving user from MongoDB: {e}")
+        return None
+
+async def update_user_wallet(auth0_id, new_wallet_value):
+    try:
+        result = await users_collection.update_one(
+            {"auth0_id": auth0_id},
+            {"$set": {"wallet": new_wallet_value}}
+        )
+        if result.modified_count > 0:
+            print(f"User wallet updated for auth0_id: {auth0_id}")
+            return True
+        else:
+            print(f"No user found with auth0_id: {auth0_id}")
+            return False
+    except Exception as e:
+        print(f"Error updating user wallet in MongoDB: {e}")
+        return False
+
 
 # Crear un nuevo usuario con un wallet inicial
 async def create_user(email: str):
