@@ -2,11 +2,13 @@
 Módulo para manejar los listeners de MQTT.
 """
 
-import paho.mqtt.client as mqtt
 import asyncio
 import os
-from database import save_fixture, handle_validation, handle_history
+
+import paho.mqtt.client as mqtt
 from dotenv import load_dotenv
+
+from database import handle_history, handle_validation, save_fixture
 
 load_dotenv()
 

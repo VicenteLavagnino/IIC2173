@@ -1,22 +1,21 @@
-from fastapi import FastAPI, Query, Depends, HTTPException, Body
-from fastapi.security import OAuth2AuthorizationCodeBearer
+import logging
+import os
 from datetime import datetime, timedelta
-from motor.motor_asyncio import AsyncIOMotorClient
-from database import (
-    collection,
-    users_collection,
-    buy_bond,
-)  # Mantener la importación completa de develop
-from fastapi.encoders import jsonable_encoder
+
+import requests
 from bson import ObjectId
+from dotenv import load_dotenv
+from fastapi import Body, Depends, FastAPI, HTTPException, Query
+from fastapi.encoders import jsonable_encoder
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2AuthorizationCodeBearer
 from jose import jwt
 from jose.exceptions import JWTError
-import requests
+from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel
-import os
-from dotenv import load_dotenv
-from fastapi.middleware.cors import CORSMiddleware
-import logging
+
+from database import (buy_bond,  # Mantener la importación completa de develop
+                      collection, users_collection)
 
 logging.basicConfig(level=logging.DEBUG)
 
