@@ -131,6 +131,10 @@ async def handle_history(payload):
             'home': fixture.get('goals', {}).get('home'),
             'away': fixture.get('goals', {}).get('away')
         }
+        status = {
+            'long': fixture.get('status', {}).get('long'),
+            'short': fixture.get('status', {}).get('short')
+        }
         
         await collection.update_one(
             {'id': fixture_id},
@@ -148,14 +152,22 @@ async def process_bonds_for_fixture(fixture_id, result):
         is_winner = (
             (bond['result'] == 'home' and result['home'] > result['away']) or
             (bond['result'] == 'away' and result['away'] > result['home']) or
-            (bond['result'] == 'draw' and result['home'] == result['away'])
+            (bond['result'] == '---' and result['home'] == result['away'])
         )
         
         if is_winner:
             fixture = await collection.find_one({"id": fixture_id})
-            odds = next((odd for odd in fixture['odds'] if odd['name'] == bond['result']), None)
+
+            if bond['result'] == '---':
+                bond_result = 'draw'
+            else :
+                bond_result = bond['result']
+                
+            odds = next((value for value in fixture['odds'][0]['values'] if value['value'] == bond_result), None)
+            # odds = next((odd for odd in fixture['odds'] if odd['name'] == bond['result']), None)
             if odds:
-                prize = bond['amount'] * float(odds['values'][0]['odd'])
+                prize = bond['amount'] * float(odds['odd'])
+                # prize = bond['amount'] * float(odds['values'][0]['odd'])
                 await update_wallet_balance(bond['user_auth0_id'], prize)
             
             await bonds_collection.update_one(
