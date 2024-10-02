@@ -41,5 +41,5 @@ jobs:
     
     - name: Test API health
       run: |
-        sleep 10  # Give some time for the container to start
+        sleep 30  # Give some time for the container to start
         curl http://localhost:8000 || exit 1
