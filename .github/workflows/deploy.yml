@@ -42,7 +42,6 @@ jobs:
           MQTT_PORT: ${{ secrets.MQTT_PORT }}
           MQTT_USER: ${{ secrets.MQTT_USER }}
           MQTT_PASSWORD: ${{ secrets.MQTT_PASSWORD }}
-          MONGO_URL: ${{ secrets.MONGO_URL }}
           MONGO_USERNAME: ${{ secrets.MONGO_USERNAME }}
           MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
           AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
@@ -56,6 +55,7 @@ jobs:
             cd IIC2173-G8;
 
             # Run Docker Compose for deployment
+            export MONGO_URL="mongodb+srv://vicentelavagnino:vicente1559@e0.dhcuf.mongodb.net/?retryWrites=true&w=majority&appName=E0"
             docker-compose down;
             docker-compose build;
             docker-compose up;
