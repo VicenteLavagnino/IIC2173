@@ -5,7 +5,15 @@ disable=C0116,  # missing-function-docstring
         W0613,  # unused-argument
         R0913,  # too-many-arguments
         W0718,  # catching too general exception
-        
+        R0402,  # Use 'from ... import ...' instead (consider-using-from-import)
+        W0612,  # Unused variable
+        R1705,  # Unnecessary 'else' after 'return'
+        W0611,  # Unused import
+        W3101,  # Missing timeout argument for requests.get
+        W0707,  # Consider re-raising exceptions with 'from exc'
+        R0917,  # Too many positional arguments
+        W0105   # String statement has no effect
+
 # Analyse import fallback blocks. This can be used to support both Python 2 and
 # 3 compatible code, which means that the block might have code that exists
 # only in one or another interpreter, leading to false positives when analysed.
