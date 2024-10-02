@@ -13,6 +13,12 @@ from jose import jwt
 from jose.exceptions import JWTError
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel
+import os
+from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
+import logging
+from typing import Dict
+
 
 from database import buy_bond  # Mantener la importación completa de develop
 from database import collection, users_collection
@@ -27,14 +33,12 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=[""],  # Métodos permitidos
+    allow_methods=["*"],  # Métodos permitidos
     allow_headers=["*"],  # Headers permitidos
 )
 
 # Configuración de Auth0
 AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN")
-AUTH0_CLIENT_ID = os.getenv("AUTH0_CLIENT_ID")
-AUTH0_CLIENT_SECRET = os.getenv("AUTH0_CLIENT_SECRET")
 AUTH0_AUDIENCE = os.getenv("AUTH0_AUDIENCE")
 ALGORITHMS = ["RS256"]
 
