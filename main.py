@@ -2,7 +2,7 @@ from fastapi import FastAPI, Query, Depends, HTTPException, Body
 from fastapi.security import OAuth2AuthorizationCodeBearer
 from datetime import datetime, timedelta
 from motor.motor_asyncio import AsyncIOMotorClient
-from database import collection, users_collection, buy_bond  # Mantener la importación completa de develop
+from database import collection, users_collection, buy_bond, fixture_bonds_collection, bonds_collection  # Mantener la importación completa de develop
 from fastapi.encoders import jsonable_encoder
 from bson import ObjectId
 from jose import jwt
@@ -21,7 +21,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=[""],  # Métodos permitidos
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],  # Headers permitidos
 )
 
@@ -168,6 +168,39 @@ async def add_funds(fund_request: FundRequest, current_user: dict = Depends(get_
         {"$set": {"wallet": new_balance}}
     )
     return {"message": "Funds added successfully", "new_balance": new_balance}
+
+@app.get("/fixtures/{fixture_id}/available_bonds")
+async def get_available_bonds(fixture_id: str, current_user: dict = Depends(get_current_user)):
+    fixture_bonds = await fixture_bonds_collection.find_one({"fixture_id": int(fixture_id)})
+    if not fixture_bonds:
+        raise HTTPException(status_code=404, detail="Fixture not found or bonds not initialized")
+    return {"fixture_id": fixture_id, "available_bonds": fixture_bonds['available_bonds']}
+
+@app.get("/users/me/purchased_bonds")
+async def get_purchased_bonds(current_user: dict = Depends(get_current_user)):
+    user_bonds = await bonds_collection.find({"user_auth0_id": current_user["sub"]}).to_list(None)
+    
+    if not user_bonds:
+        return {"message": "No bonds purchased yet"}
+
+    formatted_bonds = []
+    for bond in user_bonds:
+        fixture = await collection.find_one({"fixture.id": int(bond['fixture_id'])})
+        formatted_bond = {
+            "request_id": bond['request_id'],
+            "fixture_id": bond['fixture_id'],
+            "result": bond['result'],
+            "amount": bond['amount'],
+            "status": bond['status'],
+            "fixture_details": {
+                "home_team": fixture['teams']['home']['name'],
+                "away_team": fixture['teams']['away']['name'],
+                "date": fixture['fixture']['date']
+            }
+        }
+        formatted_bonds.append(formatted_bond)
+
+    return jsonable_encoder(formatted_bonds, custom_encoder={ObjectId: str})
 
 if __name__ == "__main__":
     import uvicorn
