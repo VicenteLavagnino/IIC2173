@@ -147,6 +147,7 @@ async def handle_request(payload):
         print(f"Error decodificando JSON en handle_request: {e}")
     except Exception as e:
         print(f"Error en handle_request: {e}")
+
 async def handle_validation(payload):
 
     print("validation")
@@ -228,8 +229,8 @@ async def handle_history(payload):
 
 
 async def process_bonds_for_fixture(fixture_id, result):
-
-    bonds = await bonds_collection.find({'fixture_id': fixture_id}).to_list(None)
+    bonds = await bonds_collection.find({'fixture_id': str(fixture_id), 'status': 'valid'}).to_list(None)
+    print(f"Procesando {len(bonds)} bonos válidos para el fixture {fixture_id}")
 
     for bond in bonds:
         is_winner = (
@@ -239,28 +240,31 @@ async def process_bonds_for_fixture(fixture_id, result):
         )
 
         if is_winner:
-            print(f"hay un ganador con el fixture {fixture_id}")
-            fixture = await collection.find_one({"id": fixture_id})
+            print(f"Bono ganador encontrado para el fixture {fixture_id}")
+            fixture = await collection.find_one({"fixture.id": int(fixture_id)})
 
-            if bond['result'] == '---':
-                bond_result = 'draw'
+            if fixture:
+                odds = next((value for value in fixture['odds'][0]['values'] if value['value'] == bond['result']), None)
+                if odds:
+                    prize = 1000 * bond['amount'] * float(odds['odd'])
+                    await update_wallet_balance(bond['user_auth0_id'], prize)
+                    print(f"Premio pagado: {prize} al usuario {bond['user_auth0_id']}")
+
+                await bonds_collection.update_one(
+                    {'_id': bond['_id']},
+                    {'$set': {'status': 'won'}}
+                )
             else:
-                bond_result = bond['result']
-
-            odds = next((value for value in fixture['odds'][0]['values'] if value['value'] == bond_result), None)
-            if odds:
-                prize = 1000 * bond['amount'] * float(odds['odd'])
-                await update_wallet_balance(bond['user_auth0_id'], prize)
-
-            await bonds_collection.update_one(
-                {'_id': bond['_id']},
-                {'$set': {'status': 'won'}}
-            )
+                print(f"No se encontró el fixture {fixture_id}")
         else:
             await bonds_collection.update_one(
                 {'_id': bond['_id']},
                 {'$set': {'status': 'lost'}}
             )
+            print(f"Bono marcado como perdido para el fixture {fixture_id}")
+
+        updated_bond = await bonds_collection.find_one({'_id': bond['_id']})
+        print(f"Estado actualizado del bono: {updated_bond['status']}")
 
 async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
     cost = amount * 1000
