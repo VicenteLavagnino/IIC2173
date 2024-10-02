@@ -23,7 +23,7 @@ from typing import Dict
 from database import buy_bond  # Mantener la importación completa de develop
 from database import collection, users_collection
 
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 
 load_dotenv()  # Carga las variables de entorno desde el archivo .env
 
@@ -197,7 +197,7 @@ async def get_fixture(fixture_id: str, current_user: dict = Depends(get_current_
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid fixture ID format")
 
-    # Buscar el fixture usando el campo fixture.id
+    #Buscar el fixture usando el campo fixture.id
     data = await collection.find_one({"fixture.id": fixture_id_int})
 
     if data:
