@@ -8,23 +8,31 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Set up SSH
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-
-    - name: Restart the application on EC2
-      run: |
-        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ec2-user@${{ secrets.EC2_IP }} << 'EOF'
-        cd /home/ec2-user/app/
-        # Si es necesario, instala dependencias
-        # pip install -r requirements.txt
-        # Reinicia el servicio
-        sudo systemctl restart myapp
-        EOF
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub
+          
+      - name: Debug SSH key
+        run: |
+          ls -l ~/.ssh
+          ssh-keygen -l -f ~/.ssh/id_rsa
+          
+      - name: Test SSH connection
+        run: ssh -v -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ec2-user@${{ secrets.EC2_IP }} 'echo "SSH connection successful"'
+        
+      - name: Restart the application on EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ec2-user@${{ secrets.EC2_IP }} << 'EOF'
+            cd /home/ec2-user/app/
+            # Si es necesario, instala dependencias
+            # pip install -r requirements.txt
+            # Reinicia el servicio
+            sudo systemctl restart myapp
+          EOF
