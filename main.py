@@ -128,21 +128,29 @@ async def get_fixtures(
         }
         query["fixture.status.long"] = "Not Started"
 
-    total = await collection.count_documents(query)  # Calcular el total de documentos
+    # Calcular el total de documentos
+    total = await collection.count_documents(query)
     cursor = collection.find(query).skip(skip).limit(count)
     fixtures_list = await cursor.to_list(length=count)
     return {
-        "fixtures": jsonable_encoder(fixtures_list, custom_encoder={ObjectId: str}),
+        "fixtures": jsonable_encoder(
+            fixtures_list,
+            custom_encoder={
+                ObjectId: str}),
         "total": total,
     }
 
 
 @app.get("/fixtures/{fixture_id}")
-async def get_fixture(fixture_id: str, current_user: dict = Depends(get_current_user)):
+async def get_fixture(
+        fixture_id: str,
+        current_user: dict = Depends(get_current_user)):
     try:
         fixture_id_int = int(fixture_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid fixture ID format")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid fixture ID format")
 
     # Buscar el fixture usando el campo fixture.id
     data = await collection.find_one({"fixture.id": fixture_id_int})
@@ -153,11 +161,16 @@ async def get_fixture(fixture_id: str, current_user: dict = Depends(get_current_
 
 
 @app.post("/users")
-async def create_user(user: User, current_user: dict = Depends(get_current_user)):
+async def create_user(
+        user: User,
+        current_user: dict = Depends(get_current_user)):
     user_data = user.dict()
     user_data["auth0_id"] = current_user["sub"]
     result = await users_collection.insert_one(user_data)
-    return {"message": "User created successfully", "id": str(result.inserted_id)}
+    return {
+        "message": "User created successfully",
+        "id": str(
+            result.inserted_id)}
 
 
 @app.get("/users")
@@ -168,7 +181,8 @@ async def get_users(current_user: dict = Depends(get_current_user)):
 
 
 @app.get("/users/me")
-async def get_current_user_info(current_user: dict = Depends(get_current_user)):
+async def get_current_user_info(
+        current_user: dict = Depends(get_current_user)):
     user = await users_collection.find_one({"auth0_id": current_user["sub"]})
     if user:
         return jsonable_encoder(user, custom_encoder={ObjectId: str})
@@ -177,8 +191,8 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
 
 @app.post("/buy_bond")
 async def buy_bond_endpoint(
-    bond: BondPurchase = Body(...), current_user: dict = Depends(get_current_user)
-):
+        bond: BondPurchase = Body(...),
+        current_user: dict = Depends(get_current_user)):
     result = await buy_bond(
         current_user["sub"], bond.fixture_id, bond.result, bond.amount
     )

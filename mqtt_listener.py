@@ -30,15 +30,14 @@ def on_connect(client, userdata, flags, rc):
 
 
 def on_message(client, userdata, msg):
-
     """
     Función callback que se ejecuta cuando llega un mensaje MQTT.
-    
+
     :param client: Cliente MQTT
     :param userdata: Datos del usuario (no usado)
     :param message: Mensaje recibido
     """
-    
+
     topic = msg.topic
     payload = msg.payload.decode()
     print(f"Received message on topic: {topic}")

@@ -34,7 +34,9 @@ async def save_fixture(data):
             fixtures = parsed_data["fixtures"]
             for fixture in fixtures:
                 result = await collection.insert_one(fixture)
-                print(f"Fixture saved to MongoDB with id: {result.inserted_id}")
+                print(
+                    f"Fixture saved to MongoDB with id: {
+                        result.inserted_id}")
         else:
             result = await collection.insert_one(parsed_data)
             print(f"Data saved to MongoDB with id: {result.inserted_id}")
@@ -67,7 +69,8 @@ async def get_user_by_auth0_id(auth0_id: str):
 
 # Crear un nuevo usuario con un wallet inicial
 async def create_user(email: str):
-    user = {"email": email, "wallet_balance": 0}  # Inicia con 0 en la billetera
+    # Inicia con 0 en la billetera
+    user = {"email": email, "wallet_balance": 0}
     result = await users_collection.insert_one(user)
     return user
 
