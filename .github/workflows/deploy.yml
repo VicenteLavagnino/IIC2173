@@ -21,7 +21,7 @@ jobs:
     - name: Deploy to EC2
       run: |
         ssh -i key.pem -o StrictHostKeyChecking=no ubuntu@18.116.175.145 '
-          cd e0-VicenteLavagnino;
+          cd IIC2173-G8;
           git pull origin main;
           docker-compose down;
           docker-compose up -d --build
