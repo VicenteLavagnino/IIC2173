@@ -1,28 +1,53 @@
 name: Deploy to EC2
-
 on:
   push:
     branches:
       - main
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Check out the repository
-      uses: actions/checkout@v2
+      - name: Check out the repository
+        uses: actions/checkout@v2
 
-    - name: Add SSH Key
-      run: |
-        echo "${{ secrets.EC2_SSH_KEY }}" > key.pem
-        chmod 400 key.pem
-      
-    - name: Deploy to EC2
-      run: |
-        ssh -i key.pem -o StrictHostKeyChecking=no ubuntu@18.116.175.145 '
-          cd IIC2173-G8;
-          git pull origin main;
-          docker-compose down;
-          docker-compose up -d --build
-        '
+      - name: Add SSH Key
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" > key.pem
+          chmod 400 key.pem
+
+      - name: Deploy to EC2
+        env:
+          MQTT_HOST: ${{ secrets.MQTT_HOST }}
+          MQTT_PORT: ${{ secrets.MQTT_PORT }}
+          MQTT_USER: ${{ secrets.MQTT_USER }}
+          MQTT_PASSWORD: ${{ secrets.MQTT_PASSWORD }}
+          MONGO_URL: ${{ secrets.MONGO_URL }}
+          MONGO_USERNAME: ${{ secrets.MONGO_USERNAME }}
+          MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
+          AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
+          AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
+          AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
+          AUTH0_AUDIENCE: ${{ secrets.AUTH0_AUDIENCE }}
+        run: |
+          ssh -i key.pem -o StrictHostKeyChecking=no ubuntu@18.116.175.145 '
+            cd IIC2173-G8;
+            git pull origin main;
+            
+            # Crear o actualizar el archivo .env
+            cat << EOF > .env
+            MQTT_HOST=${{ secrets.MQTT_HOST }}
+            MQTT_PORT=${{ secrets.MQTT_PORT }}
+            MQTT_USER=${{ secrets.MQTT_USER }}
+            MQTT_PASSWORD=${{ secrets.MQTT_PASSWORD }}
+            MONGO_URL=${{ secrets.MONGO_URL }}
+            MONGO_USERNAME=${{ secrets.MONGO_USERNAME }}
+            MONGO_PASSWORD=${{ secrets.MONGO_PASSWORD }}
+            AUTH0_DOMAIN=${{ secrets.AUTH0_DOMAIN }}
+            AUTH0_CLIENT_ID=${{ secrets.AUTH0_CLIENT_ID }}
+            AUTH0_CLIENT_SECRET=${{ secrets.AUTH0_CLIENT_SECRET }}
+            AUTH0_AUDIENCE=${{ secrets.AUTH0_AUDIENCE }}
+            EOF
+            
+            docker-compose down;
+            docker-compose up -d --build
+          '
