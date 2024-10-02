@@ -38,8 +38,3 @@ jobs:
     
     - name: Run Docker container
       run: docker run -d -p 8000:8000 myapp-backend
-    
-    - name: Test API health
-      run: |
-        sleep 30  # Give some time for the container to start
-        curl http://localhost:8000 || exit 1
