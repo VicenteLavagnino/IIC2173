@@ -26,6 +26,7 @@ MQTT_PASSWORD = os.getenv("MQTT_PASSWORD")
 
 # Guardar fixtures en la base de datos
 async def save_fixture(data):
+    """Guarda los fixtures en la base de datos"""
     try:
         data = data.strip('"')
         data = data.replace('\\"', '"')
@@ -34,9 +35,7 @@ async def save_fixture(data):
             fixtures = parsed_data["fixtures"]
             for fixture in fixtures:
                 result = await collection.insert_one(fixture)
-                print(
-                    f"Fixture saved to MongoDB with id: {
-                        result.inserted_id}")
+                print(f"Data saved to MongoDB with id: {result.inserted_id}")
         else:
             result = await collection.insert_one(parsed_data)
             print(f"Data saved to MongoDB with id: {result.inserted_id}")
@@ -49,6 +48,7 @@ async def save_fixture(data):
 
 
 async def save_user(user_data):
+    """Guarda un usuario en la base de datos"""
     try:
         result = await users_collection.insert_one(user_data)
         print(f"User saved to MongoDB with id: {result.inserted_id}")
@@ -60,15 +60,18 @@ async def save_user(user_data):
 
 # Obtener usuario por email
 async def get_user_by_email(email: str):
+    """Obtiene un usuario por email"""
     return await users_collection.find_one({"email": email})
 
 
 async def get_user_by_auth0_id(auth0_id: str):
+    """Obtiene un usuario por auth0_id"""
     return await users_collection.find_one({"auth0_id": auth0_id})
 
 
 # Crear un nuevo usuario con un wallet inicial
 async def create_user(email: str):
+    """Crea un usuario con un saldo inicial de 0"""
     # Inicia con 0 en la billetera
     user = {"email": email, "wallet_balance": 0}
     result = await users_collection.insert_one(user)
@@ -77,6 +80,7 @@ async def create_user(email: str):
 
 # Actualizar el saldo del wallet del usuario
 async def update_wallet_balance(auth0_id: str, amount: int):
+    """Actualiza el saldo del wallet del usuario"""
     user = await get_user_by_auth0_id(auth0_id)
     if user:
         new_balance = user["wallet"] + amount
@@ -88,6 +92,7 @@ async def update_wallet_balance(auth0_id: str, amount: int):
 
 
 async def handle_request(payload):
+    """Guarda una solicitud de bono en la base de datos"""
     try:
         data = json.loads(payload)
         request_id = data.get("request_id")
@@ -111,6 +116,7 @@ async def handle_request(payload):
 
 
 async def handle_validation(payload):
+    """Actualiza el estado de una solicitud de bono"""
     data = json.loads(payload)
     request_id = data.get("request_id")
     is_valid = data.get("valid")
@@ -140,6 +146,7 @@ async def handle_validation(payload):
 
 
 async def handle_history(payload):
+    """Procesa el historial de partidos"""
     data = json.loads(payload)
     fixtures = data.get("fixtures", [])
 
@@ -162,6 +169,7 @@ async def handle_history(payload):
 
 
 async def process_bonds_for_fixture(fixture_id, result):
+    """Procesa los bonos para un partido"""
     bonds = await bonds_collection.find(
         {"fixture_id": fixture_id, "status": "valid"}
     ).to_list(None)
@@ -203,6 +211,7 @@ async def process_bonds_for_fixture(fixture_id, result):
 
 
 async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
+    """Compra un bono"""
     user = await get_user_by_auth0_id(auth0_id)
     fixture_id_int = int(fixture_id)
     fixture = await collection.find_one({"fixture.id": fixture_id_int})
@@ -259,6 +268,7 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
 
 
 async def update_user_wallet(auth0_id, new_wallet_value):
+    """Actualiza el saldo de la billetera del usuario"""
     try:
         result = await users_collection.update_one(
             {"auth0_id": auth0_id}, {"$set": {"wallet": new_wallet_value}}

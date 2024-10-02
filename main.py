@@ -45,28 +45,33 @@ oauth2_scheme = OAuth2AuthorizationCodeBearer(
 
 
 class User(BaseModel):
+    """Modelo para crear un usuario"""
     email: str
     wallet: float = 0
 
 
 class BondPurchase(BaseModel):
+    """Modelo para comprar un bono"""
     fixture_id: str
     result: str
     amount: int
 
 
 class FundRequest(BaseModel):
+    """Modelo para agregar fondos"""
     amount: float
 
 
 # Función para obtener las claves públicas de Auth0
 def get_auth0_jwks():
+    """Obtiene las claves públicas de Auth0"""
     response = requests.get(f"https://{AUTH0_DOMAIN}/.well-known/jwks.json")
     jwks = response.json()
     return jwks
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
+    """Obtiene el usuario actual"""
     try:
         jwks = get_auth0_jwks()
         unverified_header = jwt.get_unverified_header(token)
@@ -97,6 +102,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 @app.get("/")
 async def root():
+    """Ruta principal de la API"""
     return {
         "message": "Hola! Bienvenido a la API de la entrega 1 - IIC2173"
     }  # Usando el mensaje de develop
@@ -104,6 +110,7 @@ async def root():
 
 @app.get("/fixtures")
 async def get_fixtures(
+
     current_user: dict = Depends(get_current_user),
     page: int = Query(1, ge=1),
     count: int = Query(25, ge=1),
@@ -111,6 +118,8 @@ async def get_fixtures(
     visit: str = None,
     date: datetime = None,
 ):
+    """Obtiene los fixtures"""
+
     skip = (page - 1) * count
     query = {}
     if home:
@@ -145,6 +154,7 @@ async def get_fixtures(
 async def get_fixture(
         fixture_id: str,
         current_user: dict = Depends(get_current_user)):
+    """Obtiene un fixture por ID"""
     try:
         fixture_id_int = int(fixture_id)
     except ValueError:
@@ -154,6 +164,7 @@ async def get_fixture(
 
     # Buscar el fixture usando el campo fixture.id
     data = await collection.find_one({"fixture.id": fixture_id_int})
+    
     if data:
         return jsonable_encoder(data, custom_encoder={ObjectId: str})
     else:
@@ -164,6 +175,7 @@ async def get_fixture(
 async def create_user(
         user: User,
         current_user: dict = Depends(get_current_user)):
+    """Crea un usuario"""
     user_data = user.dict()
     user_data["auth0_id"] = current_user["sub"]
     result = await users_collection.insert_one(user_data)
@@ -175,6 +187,7 @@ async def create_user(
 
 @app.get("/users")
 async def get_users(current_user: dict = Depends(get_current_user)):
+    """Obtiene todos los usuarios"""
     cursor = users_collection.find({})
     users_list = await cursor.to_list(length=100)
     return jsonable_encoder(users_list, custom_encoder={ObjectId: str})
@@ -184,6 +197,7 @@ async def get_users(current_user: dict = Depends(get_current_user)):
 async def get_current_user_info(
         current_user: dict = Depends(get_current_user)):
     user = await users_collection.find_one({"auth0_id": current_user["sub"]})
+    """Obtiene la información del usuario actual"""
     if user:
         return jsonable_encoder(user, custom_encoder={ObjectId: str})
     raise HTTPException(status_code=404, detail="User not found")
@@ -193,6 +207,7 @@ async def get_current_user_info(
 async def buy_bond_endpoint(
         bond: BondPurchase = Body(...),
         current_user: dict = Depends(get_current_user)):
+    """Compra un bono"""
     result = await buy_bond(
         current_user["sub"], bond.fixture_id, bond.result, bond.amount
     )
@@ -203,6 +218,7 @@ async def buy_bond_endpoint(
 async def add_funds(
     fund_request: FundRequest, current_user: dict = Depends(get_current_user)
 ):
+    """Agrega fondos a la billetera del usuario"""
     user = await users_collection.find_one({"auth0_id": current_user["sub"]})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
