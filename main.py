@@ -71,10 +71,15 @@ class FundRequest(BaseModel):
 
 # Función para obtener las claves públicas de Auth0
 def get_auth0_jwks():
+    jwks_url = f"https://{AUTH0_DOMAIN}/.well-known/jwks.json"
+    jwks_response = requests.get(jwks_url)
+    return jwks_response.json()
     """Obtiene las claves públicas de Auth0"""
     response = requests.get(f"https://{AUTH0_DOMAIN}/.well-known/jwks.json")
     jwks = response.json()
     return jwks
+
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> Dict:
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -82,6 +87,10 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     try:
         jwks = get_auth0_jwks()
         unverified_header = jwt.get_unverified_header(token)
+
+        if "kid" not in unverified_header:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
         rsa_key = {}
         for key in jwks["keys"]:
             if key["kid"] == unverified_header["kid"]:
@@ -92,6 +101,18 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
                     "n": key["n"],
                     "e": key["e"],
                 }
+        if not rsa_key:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+        payload = jwt.decode(
+            token,
+            rsa_key,
+            algorithms=ALGORITHMS,
+            audience=AUTH0_AUDIENCE,
+            issuer=f"https://{AUTH0_DOMAIN}/"
+        )
+        return payload
+    except JWTError as e:
         if rsa_key:
             payload = jwt.decode(
                 token,
@@ -113,6 +134,23 @@ async def root():
     return {
         "message": "Hola! Bienvenido a la API de la entrega 1 - IIC2173"
     }  # Usando el mensaje de develop
+
+
+
+@app.post("/get_token")
+def get_access_token():
+    url = f"https://{os.getenv('AUTH0_DOMAIN')}/oauth/token"
+    headers = {'content-type': 'application/json'}
+    data = {
+        'client_id': os.getenv('AUTH0_CLIENT_ID'),
+        'client_secret': os.getenv('AUTH0_CLIENT_SECRET'),
+        'audience': os.getenv('AUTH0_AUDIENCE'),
+        'grant_type': 'client_credentials'
+    }
+
+    response = requests.post(url, json=data, headers=headers)
+    token_info = response.json()
+    return token_info
 
 
 @app.get("/fixtures")
@@ -172,6 +210,7 @@ async def get_fixture(fixture_id: str, current_user: dict = Depends(get_current_
 
 @app.post("/users")
 async def create_user(user: User, current_user: dict = Depends(get_current_user)):
+    # log el token
     """Crea un usuario"""
     user_data = user.dict()
     user_data["auth0_id"] = current_user["sub"]
@@ -220,6 +259,7 @@ async def add_funds(
         {"auth0_id": current_user["sub"]}, {"$set": {"wallet": new_balance}}
     )
     return {"message": "Funds added successfully", "new_balance": new_balance}
+
 
 
 if __name__ == "__main__":
