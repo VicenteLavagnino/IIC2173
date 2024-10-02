@@ -81,8 +81,6 @@ def get_auth0_jwks():
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> Dict:
 
-
-async def get_current_user(token: str = Depends(oauth2_scheme)):
     """Obtiene el usuario actual"""
     try:
         jwks = get_auth0_jwks()
