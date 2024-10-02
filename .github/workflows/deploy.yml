@@ -41,7 +41,7 @@ jobs:
             # Run Docker Compose
             docker-compose down;
             docker-compose up -d --build;
-          EOF
+          EOT
         env:
           MQTT_HOST: ${{ secrets.MQTT_HOST }}
           MQTT_PORT: ${{ secrets.MQTT_PORT }}
