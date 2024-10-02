@@ -1,14 +1,8 @@
-"""
-Módulo para manejar los listeners de MQTT.
-"""
-
+import paho.mqtt.client as mqtt
 import asyncio
 import os
-
-import paho.mqtt.client as mqtt
+from database import save_fixture, handle_validation, handle_history, handle_request
 from dotenv import load_dotenv
-
-from database import handle_history, handle_validation, save_fixture
 
 load_dotenv()
 
@@ -20,48 +14,34 @@ password = os.getenv("MQTT_PASSWORD")
 
 loop = asyncio.get_event_loop()
 
-
 def on_connect(client, userdata, flags, rc):
-    """Función callback que se ejecuta cuando se conecta al broker MQTT."""
     print("Connected with result code " + str(rc))
     client.subscribe("fixtures/info")
     client.subscribe("fixtures/requests")
     client.subscribe("fixtures/validation")
     client.subscribe("fixtures/history")
 
-
 def on_message(client, userdata, msg):
-    """
-    Función callback que se ejecuta cuando llega un mensaje MQTT.
-
-    :param client: Cliente MQTT
-    :param userdata: Datos del usuario (no usado)
-    :param message: Mensaje recibido
-    """
-
     topic = msg.topic
     payload = msg.payload.decode()
     print(f"Received message on topic: {topic}")
-    # print(f"Message payload: {payload[:200]}...")
+    #print(f"Message payload: {payload[:200]}...")
     if topic == "fixtures/info":
         asyncio.run_coroutine_threadsafe(save_fixture(payload), loop)
     elif topic == "fixtures/requests":
-        pass
+        asyncio.run_coroutine_threadsafe(handle_request(payload), loop)
     elif topic == "fixtures/validation":
         asyncio.run_coroutine_threadsafe(handle_validation(payload), loop)
     elif topic == "fixtures/history":
         asyncio.run_coroutine_threadsafe(handle_history(payload), loop)
 
-
 def run_mqtt_client():
-    """Función para correr el cliente MQTT"""
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message
     client.username_pw_set(user, password)
     client.connect(host, port, 60)
     client.loop_forever()
-
 
 if __name__ == "__main__":
     run_mqtt_client()
