@@ -14,8 +14,8 @@ from jose.exceptions import JWTError
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel
 
-from database import (buy_bond,  # Mantener la importación completa de develop
-                      collection, users_collection)
+from database import buy_bond  # Mantener la importación completa de develop
+from database import collection, users_collection
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -46,12 +46,14 @@ oauth2_scheme = OAuth2AuthorizationCodeBearer(
 
 class User(BaseModel):
     """Modelo para crear un usuario"""
+
     email: str
     wallet: float = 0
 
 
 class BondPurchase(BaseModel):
     """Modelo para comprar un bono"""
+
     fixture_id: str
     result: str
     amount: int
@@ -59,6 +61,7 @@ class BondPurchase(BaseModel):
 
 class FundRequest(BaseModel):
     """Modelo para agregar fondos"""
+
     amount: float
 
 
@@ -110,7 +113,6 @@ async def root():
 
 @app.get("/fixtures")
 async def get_fixtures(
-
     current_user: dict = Depends(get_current_user),
     page: int = Query(1, ge=1),
     count: int = Query(25, ge=1),
@@ -142,29 +144,22 @@ async def get_fixtures(
     cursor = collection.find(query).skip(skip).limit(count)
     fixtures_list = await cursor.to_list(length=count)
     return {
-        "fixtures": jsonable_encoder(
-            fixtures_list,
-            custom_encoder={
-                ObjectId: str}),
+        "fixtures": jsonable_encoder(fixtures_list, custom_encoder={ObjectId: str}),
         "total": total,
     }
 
 
 @app.get("/fixtures/{fixture_id}")
-async def get_fixture(
-        fixture_id: str,
-        current_user: dict = Depends(get_current_user)):
+async def get_fixture(fixture_id: str, current_user: dict = Depends(get_current_user)):
     """Obtiene un fixture por ID"""
     try:
         fixture_id_int = int(fixture_id)
     except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid fixture ID format")
+        raise HTTPException(status_code=400, detail="Invalid fixture ID format")
 
     # Buscar el fixture usando el campo fixture.id
     data = await collection.find_one({"fixture.id": fixture_id_int})
-    
+
     if data:
         return jsonable_encoder(data, custom_encoder={ObjectId: str})
     else:
@@ -172,17 +167,12 @@ async def get_fixture(
 
 
 @app.post("/users")
-async def create_user(
-        user: User,
-        current_user: dict = Depends(get_current_user)):
+async def create_user(user: User, current_user: dict = Depends(get_current_user)):
     """Crea un usuario"""
     user_data = user.dict()
     user_data["auth0_id"] = current_user["sub"]
     result = await users_collection.insert_one(user_data)
-    return {
-        "message": "User created successfully",
-        "id": str(
-            result.inserted_id)}
+    return {"message": "User created successfully", "id": str(result.inserted_id)}
 
 
 @app.get("/users")
@@ -194,8 +184,7 @@ async def get_users(current_user: dict = Depends(get_current_user)):
 
 
 @app.get("/users/me")
-async def get_current_user_info(
-        current_user: dict = Depends(get_current_user)):
+async def get_current_user_info(current_user: dict = Depends(get_current_user)):
     user = await users_collection.find_one({"auth0_id": current_user["sub"]})
     """Obtiene la información del usuario actual"""
     if user:
@@ -205,8 +194,8 @@ async def get_current_user_info(
 
 @app.post("/buy_bond")
 async def buy_bond_endpoint(
-        bond: BondPurchase = Body(...),
-        current_user: dict = Depends(get_current_user)):
+    bond: BondPurchase = Body(...), current_user: dict = Depends(get_current_user)
+):
     """Compra un bono"""
     result = await buy_bond(
         current_user["sub"], bond.fixture_id, bond.result, bond.amount
