@@ -17,11 +17,10 @@ jobs:
           echo "${{ secrets.EC2_SSH_KEY }}" > key.pem
           chmod 400 key.pem
 
-      - name: Create .env file and deploy
+      - name: Create .env file on EC2
         run: |
           ssh -i key.pem -o StrictHostKeyChecking=no ubuntu@18.116.175.145 << EOF
             cd IIC2173-G8;
-            git pull origin main;
 
             # Create or update .env file on EC2
             cat <<EOT > .env
@@ -36,11 +35,8 @@ jobs:
             AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
             AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET}
             AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
-
-            # Run Docker Compose
-            docker-compose down;
-            docker-compose up -d --build;
-          EOT
+            EOT
+          EOF
         env:
           MQTT_HOST: ${{ secrets.MQTT_HOST }}
           MQTT_PORT: ${{ secrets.MQTT_PORT }}
@@ -53,3 +49,14 @@ jobs:
           AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
           AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
           AUTH0_AUDIENCE: ${{ secrets.AUTH0_AUDIENCE }}
+
+      - name: Deploy to EC2
+        run: |
+          ssh -i key.pem -o StrictHostKeyChecking=no ubuntu@18.116.175.145 << EOF
+            cd IIC2173-G8;
+
+            # Run Docker Compose for deployment
+            docker-compose down;
+            docker-compose build;
+            docker-compose up;
+          EOF
