@@ -22,6 +22,7 @@ loop = asyncio.get_event_loop()
 
 
 def on_connect(client, userdata, flags, rc):
+    """ Función callback que se ejecuta cuando se conecta al broker MQTT. """
     print("Connected with result code " + str(rc))
     client.subscribe("fixtures/info")
     client.subscribe("fixtures/requests")
@@ -53,6 +54,7 @@ def on_message(client, userdata, msg):
 
 
 def run_mqtt_client():
+    """ Función para correr el cliente MQTT """
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message
