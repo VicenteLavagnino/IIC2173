@@ -21,6 +21,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
+
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],  # Headers permitidos
 )
@@ -85,7 +86,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 @app.get("/")
 async def root():
-    return {"message": "Hola! Bienvenido a la API de la entrega 1- IIC2173"}  # Usando el mensaje de develop
+    return {"message": "Hola! Bienvenido a la API de la entrega 1- IIC2173 - Grupo 8"}  # Usando el mensaje de develop
 
 @app.get("/fixtures")
 async def get_fixtures(
