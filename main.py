@@ -12,9 +12,6 @@ from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
-import logging
-
-logging.basicConfig(level=logging.DEBUG)
 
 load_dotenv()  # Carga las variables de entorno desde el archivo .env
 
