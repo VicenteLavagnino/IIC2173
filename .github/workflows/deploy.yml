@@ -37,9 +37,6 @@ jobs:
             AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET}
             AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
             EOT
-
-            docker-compose down;
-            docker-compose up -d --build;
           EOF
         env:
           MQTT_HOST: ${{ secrets.MQTT_HOST }}
@@ -53,3 +50,10 @@ jobs:
           AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
           AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
           AUTH0_AUDIENCE: ${{ secrets.AUTH0_AUDIENCE }}
+
+      - name: deploy
+        run: |
+          ssh -i key.pem -o StrictHostKeyChecking=no ubuntu@
+            cd IIC2173-G8;
+            docker-compose down;
+            docker-compose up -d --build;
