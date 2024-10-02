@@ -14,10 +14,9 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Set up SSH
-      run: |
-        echo "${{ secrets.EC2_SSH_KEY_BASE64 }}" | base64 --decode > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-    
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
     - name: Copy files to EC2
       run: |
