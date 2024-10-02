@@ -193,8 +193,8 @@ async def handle_validation(payload):
             )
         
         print(f"Bono invalidado: {request_id}")
+
 async def handle_history(payload):
-    print("handle historrrrrrrry")
 
     if isinstance(payload, str):
         if payload.startswith('"') and payload.endswith('"'):
@@ -203,7 +203,6 @@ async def handle_history(payload):
 
     data = json.loads(payload)
 
-    print("esta bueno")
     fixtures = data.get('fixtures', [])
     print(f"Procesando historial de {len(fixtures)} partidos")
 
@@ -229,11 +228,8 @@ async def handle_history(payload):
 
 
 async def process_bonds_for_fixture(fixture_id, result):
-    print("fixture history")
+
     bonds = await bonds_collection.find({'fixture_id': fixture_id}).to_list(None)
-    print(f"Procesando {len(bonds)} bonos para el fixture {fixture_id}")
-    bondstotales = await bonds_collection.find().to_list(None)
-    print(f"Procesando {len(bondstotales)} bonos totales")
 
     for bond in bonds:
         is_winner = (
@@ -295,7 +291,7 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
         "result": result,
         "deposit_token": "",
         "datetime": datetime.utcnow().isoformat(),
-        "quantity": 1,
+        "quantity": amount,
         "seller": 0
     }
 
@@ -321,7 +317,7 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
 
     await collection.update_one(
         {"id": fixture_id},
-        {"$inc": {"available_bonds": -1}}
+        {"$inc": {"available_bonds": -amount}}
     )
 
     return {"message": "Bond purchase request sent", "request_id": request_id}
