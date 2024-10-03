@@ -1,11 +1,12 @@
-from motor.motor_asyncio import AsyncIOMotorClient
 import json
 import os
-from dotenv import load_dotenv
-from bson import ObjectId
-from datetime import datetime
 import uuid
+from datetime import datetime
+
 import paho.mqtt.publish as publish
+from bson import ObjectId
+from dotenv import load_dotenv
+from motor.motor_asyncio import AsyncIOMotorClient
 
 load_dotenv()
 
@@ -24,14 +25,15 @@ MQTT_PORT = int(os.getenv("MQTT_PORT"))
 MQTT_USER = os.getenv("MQTT_USER")
 MQTT_PASSWORD = os.getenv("MQTT_PASSWORD")
 
+
 # Guardar fixtures en la base de datos
 async def save_fixture(data):
     try:
         data = data.strip('"')
         data = data.replace('\\"', '"')
         parsed_data = json.loads(data)
-        if 'fixtures' in parsed_data:
-            fixtures = parsed_data['fixtures']
+        if "fixtures" in parsed_data:
+            fixtures = parsed_data["fixtures"]
             for fixture in fixtures:
                 result = await collection.insert_one(fixture)
                 print(f"Fixture saved to MongoDB with id: {result.inserted_id}")
@@ -56,89 +58,98 @@ async def save_user(user_data):
         print(f"Error saving user to MongoDB: {e}")
         return None
 
+
 # Obtener usuario por email
 async def get_user_by_email(email: str):
     return await users_collection.find_one({"email": email})
+
 
 # Obtener usuario por auth0_id
 async def get_user_by_auth0_id(auth0_id: str):
     return await users_collection.find_one({"auth0_id": auth0_id})
 
+
 # Crear un nuevo usuario con un wallet inicial
 async def create_user(email: str):
-    user = {
-        "email": email,
-        "wallet_balance": 0  # Inicia con 0 en la billetera
-    }
+    user = {"email": email, "wallet_balance": 0}  # Inicia con 0 en la billetera
     result = await users_collection.insert_one(user)
     return user
+
 
 # Actualizar el saldo del wallet del usuario
 async def update_wallet_balance(auth0_id: str, amount: int):
     user = await get_user_by_auth0_id(auth0_id)
     if user:
         new_balance = user["wallet"] + amount
-        await users_collection.update_one({"auth0_id": auth0_id}, {"$set": {"wallet": new_balance}})
+        await users_collection.update_one(
+            {"auth0_id": auth0_id}, {"$set": {"wallet": new_balance}}
+        )
         return new_balance
     return None
+
 
 async def initialize_fixture_bonds(fixture_id):
     existing_bonds = await fixture_bonds_collection.find_one({"fixture_id": fixture_id})
     if not existing_bonds:
-        await fixture_bonds_collection.insert_one({
-            "fixture_id": fixture_id,
-            "available_bonds": 40
-        })
+        await fixture_bonds_collection.insert_one(
+            {"fixture_id": fixture_id, "available_bonds": 40}
+        )
         print(f"Initialized 40 bonds for fixture {fixture_id}")
     else:
         print(f"Bonds already initialized for fixture {fixture_id}")
+
 
 async def check_and_update_available_bonds(fixture_id, quantity):
     # Intentar con el fixture_id como número primero
     result = await fixture_bonds_collection.find_one_and_update(
         {"fixture_id": int(fixture_id), "available_bonds": {"$gte": quantity}},
         {"$inc": {"available_bonds": -quantity}},
-        return_document=True
+        return_document=True,
     )
-    
+
     if not result:
         # Si no se encuentra, intentar con el fixture_id como string
         result = await fixture_bonds_collection.find_one_and_update(
             {"fixture_id": str(fixture_id), "available_bonds": {"$gte": quantity}},
             {"$inc": {"available_bonds": -quantity}},
-            return_document=True
+            return_document=True,
         )
-    
+
     if result:
-        print(f"Updated available bonds for fixture {fixture_id}. Remaining: {result['available_bonds']}")
+        print(
+            f"Updated available bonds for fixture {fixture_id}. Remaining: {result['available_bonds']}"
+        )
         return True
     else:
         print(f"No available bonds for fixture {fixture_id}")
         return False
 
+
 async def handle_request(payload):
     try:
         data = json.loads(payload)
-        request_id = data.get('request_id')
-        group_id = data.get('group_id')
-        fixture_id = data.get('fixture_id')
-        result = data.get('result')
-        quantity = data.get('quantity', 1)
+        request_id = data.get("request_id")
+        group_id = data.get("group_id")
+        fixture_id = data.get("fixture_id")
+        result = data.get("result")
+        quantity = data.get("quantity", 1)
 
         # Verificar si la solicitud es de otro grupo
         if group_id != "8":  # Asumiendo que "8" es el ID de tu grupo
-            await bond_requests_collection.insert_one({
-                'request_id': request_id,
-                'group_id': group_id,
-                'fixture_id': fixture_id,
-                'result': result,
-                'quantity': quantity,
-                'status': 'pending'
-            })
-            
+            await bond_requests_collection.insert_one(
+                {
+                    "request_id": request_id,
+                    "group_id": group_id,
+                    "fixture_id": fixture_id,
+                    "result": result,
+                    "quantity": quantity,
+                    "status": "pending",
+                }
+            )
+
             # Actualizar la cantidad de bonos disponibles
             await check_and_update_available_bonds(fixture_id, quantity)
-            
+
             print(f"Solicitud de bono de otro grupo guardada: {request_id}")
         else:
             print(f"Solicitud de bono de nuestro grupo recibida: {request_id}")
@@ -148,16 +159,17 @@ async def handle_request(payload):
     except Exception as e:
         print(f"Error en handle_request: {e}")
 
+
 async def handle_validation(payload):
 
     print("validation")
 
     data = json.loads(payload)
-    request_id = data.get('request_id')
-    is_valid = data.get('valid')
+    request_id = data.get("request_id")
+    is_valid = data.get("valid")
 
-    our_bond = await bonds_collection.find_one({'request_id': request_id})
-    other_bond = await bond_requests_collection.find_one({'request_id': request_id})
+    our_bond = await bonds_collection.find_one({"request_id": request_id})
+    other_bond = await bond_requests_collection.find_one({"request_id": request_id})
 
     bond_request = our_bond or other_bond
 
@@ -168,32 +180,33 @@ async def handle_validation(payload):
     if is_valid:
         if our_bond:
             await bonds_collection.update_one(
-                {'request_id': request_id},
-                {'$set': {'status': 'valid'}}
+                {"request_id": request_id}, {"$set": {"status": "valid"}}
             )
         elif other_bond:
             await bond_requests_collection.update_one(
-                {'request_id': request_id},
-                {'$set': {'status': 'valid'}}
+                {"request_id": request_id}, {"$set": {"status": "valid"}}
             )
         print(f"Bono validado: {request_id}")
     else:
-        await restore_available_bonds(bond_request['fixture_id'], bond_request['quantity'])
-        
+        await restore_available_bonds(
+            bond_request["fixture_id"], bond_request["quantity"]
+        )
+
         if our_bond:
             # Devolver el dinero al usuario
-            await update_wallet_balance(our_bond['user_auth0_id'], our_bond['amount'] * 1000)
+            await update_wallet_balance(
+                our_bond["user_auth0_id"], our_bond["amount"] * 1000
+            )
             await bonds_collection.update_one(
-                {'request_id': request_id},
-                {'$set': {'status': 'invalid'}}
+                {"request_id": request_id}, {"$set": {"status": "invalid"}}
             )
         elif other_bond:
             await bond_requests_collection.update_one(
-                {'request_id': request_id},
-                {'$set': {'status': 'invalid'}}
+                {"request_id": request_id}, {"$set": {"status": "invalid"}}
             )
-        
+
         print(f"Bono invalidado: {request_id}")
+
 
 async def handle_history(payload):
 
@@ -204,24 +217,21 @@ async def handle_history(payload):
 
     data = json.loads(payload)
 
-    fixtures = data.get('fixtures', [])
+    fixtures = data.get("fixtures", [])
     print(f"Procesando historial de {len(fixtures)} partidos")
 
     for fixture in fixtures:
-        fixture_id = fixture.get('fixture', {}).get('id')
+        fixture_id = fixture.get("fixture", {}).get("id")
         result = {
-            'home': fixture.get('goals', {}).get('home'),
-            'away': fixture.get('goals', {}).get('away')
+            "home": fixture.get("goals", {}).get("home"),
+            "away": fixture.get("goals", {}).get("away"),
         }
         status = {
-            'long': fixture.get('fixture', {}).get('status', {}).get('long'),
-            'short': fixture.get('fixture', {}).get('status', {}).get('short')
+            "long": fixture.get("fixture", {}).get("status", {}).get("long"),
+            "short": fixture.get("fixture", {}).get("status", {}).get("short"),
         }
 
-        await collection.update_one(
-            {'id': fixture_id},
-            {'$set': {'result': result}}
-        )
+        await collection.update_one({"id": fixture_id}, {"$set": {"result": result}})
 
         await process_bonds_for_fixture(fixture_id, result)
 
@@ -229,14 +239,16 @@ async def handle_history(payload):
 
 
 async def process_bonds_for_fixture(fixture_id, result):
-    bonds = await bonds_collection.find({'fixture_id': str(fixture_id), 'status': 'valid'}).to_list(None)
+    bonds = await bonds_collection.find(
+        {"fixture_id": str(fixture_id), "status": "valid"}
+    ).to_list(None)
     print(f"Procesando {len(bonds)} bonos válidos para el fixture {fixture_id}")
 
     for bond in bonds:
         is_winner = (
-            (bond['result'] == 'home' and result['home'] > result['away']) or
-            (bond['result'] == 'away' and result['away'] > result['home']) or
-            (bond['result'] == '---' and result['home'] == result['away'])
+            (bond["result"] == "home" and result["home"] > result["away"])
+            or (bond["result"] == "away" and result["away"] > result["home"])
+            or (bond["result"] == "---" and result["home"] == result["away"])
         )
 
         if is_winner:
@@ -244,27 +256,33 @@ async def process_bonds_for_fixture(fixture_id, result):
             fixture = await collection.find_one({"fixture.id": int(fixture_id)})
 
             if fixture:
-                odds = next((value for value in fixture['odds'][0]['values'] if value['value'] == bond['result']), None)
+                odds = next(
+                    (
+                        value
+                        for value in fixture["odds"][0]["values"]
+                        if value["value"] == bond["result"]
+                    ),
+                    None,
+                )
                 if odds:
-                    prize = 1000 * bond['amount'] * float(odds['odd'])
-                    await update_wallet_balance(bond['user_auth0_id'], prize)
+                    prize = 1000 * bond["amount"] * float(odds["odd"])
+                    await update_wallet_balance(bond["user_auth0_id"], prize)
                     print(f"Premio pagado: {prize} al usuario {bond['user_auth0_id']}")
 
                 await bonds_collection.update_one(
-                    {'_id': bond['_id']},
-                    {'$set': {'status': 'won'}}
+                    {"_id": bond["_id"]}, {"$set": {"status": "won"}}
                 )
             else:
                 print(f"No se encontró el fixture {fixture_id}")
         else:
             await bonds_collection.update_one(
-                {'_id': bond['_id']},
-                {'$set': {'status': 'lost'}}
+                {"_id": bond["_id"]}, {"$set": {"status": "lost"}}
             )
             print(f"Bono marcado como perdido para el fixture {fixture_id}")
 
-        updated_bond = await bonds_collection.find_one({'_id': bond['_id']})
+        updated_bond = await bonds_collection.find_one({"_id": bond["_id"]})
         print(f"Estado actualizado del bono: {updated_bond['status']}")
+
 
 async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
     cost = amount * 1000
@@ -278,7 +296,7 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
         return {"error": "Fixture not found"}
     if user["wallet"] < cost:
         return {"error": "Insufficient funds"}
-    
+
     bonds_available = await check_and_update_available_bonds(fixture_id_int, amount)
     if not bonds_available:
         return {"error": "No hay suficientes bonos disponibles para este partido"}
@@ -296,7 +314,7 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
         "deposit_token": "",
         "datetime": datetime.utcnow().isoformat(),
         "quantity": amount,
-        "seller": 0
+        "seller": 0,
     }
 
     publish.single(
@@ -304,44 +322,48 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
         payload=json.dumps(request_message),
         hostname=MQTT_HOST,
         port=MQTT_PORT,
-        auth={'username': MQTT_USER, 'password': MQTT_PASSWORD}
+        auth={"username": MQTT_USER, "password": MQTT_PASSWORD},
     )
     print(f"Mensaje enviado al broker: {json.dumps(request_message)}")
 
-    await bonds_collection.insert_one({
-        'request_id': request_id,
-        'user_auth0_id': auth0_id,
-        'fixture_id': fixture_id,
-        'result': result,
-        'amount': amount,
-        'status': 'pending'
-    })
+    await bonds_collection.insert_one(
+        {
+            "request_id": request_id,
+            "user_auth0_id": auth0_id,
+            "fixture_id": fixture_id,
+            "result": result,
+            "amount": amount,
+            "status": "pending",
+        }
+    )
 
     await update_wallet_balance(auth0_id, -amount * 1000)
 
     await collection.update_one(
-        {"id": fixture_id},
-        {"$inc": {"available_bonds": -amount}}
+        {"id": fixture_id}, {"$inc": {"available_bonds": -amount}}
     )
 
     return {"message": "Bond purchase request sent", "request_id": request_id}
+
 
 async def restore_available_bonds(fixture_id, quantity):
     result = await fixture_bonds_collection.find_one_and_update(
         {"fixture_id": fixture_id},
         {"$inc": {"available_bonds": quantity}},
-        return_document=True
+        return_document=True,
     )
     if result:
-        print(f"Restored {quantity} bonds for fixture {fixture_id}. Now available: {result['available_bonds']}")
+        print(
+            f"Restored {quantity} bonds for fixture {fixture_id}. Now available: {result['available_bonds']}"
+        )
     else:
         print(f"Failed to restore bonds for fixture {fixture_id}")
+
 
 async def update_user_wallet(auth0_id, new_wallet_value):
     try:
         result = await users_collection.update_one(
-            {"auth0_id": auth0_id},
-            {"$set": {"wallet": new_wallet_value}}
+            {"auth0_id": auth0_id}, {"$set": {"wallet": new_wallet_value}}
         )
         if result.modified_count > 0:
             print(f"User wallet updated for auth0_id: {auth0_id}")
@@ -352,4 +374,3 @@ async def update_user_wallet(auth0_id, new_wallet_value):
     except Exception as e:
         print(f"Error updating user wallet in MongoDB: {e}")
         return False
-
