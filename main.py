@@ -86,7 +86,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 @app.get("/")
 async def root():
-    return {"message": "Hola! Bienvenido a la API de la entrega 1- IIC2173 - Grupo 8"}  # Usando el mensaje de develop
+    return {"message": "Hola! Bienvenido a la API de la entrega 1 - IIC2173 - Grupo 8"}  # Usando el mensaje de develop
 
 @app.get("/fixtures")
 async def get_fixtures(
