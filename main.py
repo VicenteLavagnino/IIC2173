@@ -88,9 +88,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
             )
             return payload
         else:
-            raise HTTPException(status_code=401, detail="Invalid token")
+            raise HTTPException(status_code=401, detail="Invalid token a")
     except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Invalid token b")
 
 
 @app.get("/")
@@ -174,12 +174,17 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
 
 
 @app.post("/buy_bond")
+<<<<<<< Updated upstream
 async def buy_bond_endpoint(
     bond: BondPurchase = Body(...), current_user: dict = Depends(get_current_user)
 ):
     result = await buy_bond(
         current_user["sub"], bond.fixture_id, bond.result, bond.amount
     )
+=======
+async def buy_bond_endpoint(bond: BondPurchase = Body(...), current_user: dict = Depends(get_current_user)):
+    result = await buy_bond(current_user['sub'], str(bond.fixture_id), bond.result, bond.amount)
+>>>>>>> Stashed changes
     return result
 
 
