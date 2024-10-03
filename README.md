@@ -17,7 +17,7 @@ Por otra parte, dentro del repositorio, se utilizó Copilot para la generación 
 ## Nombre del Dominio
 
 ```bash
-iic2173.lavagnino.cl
+coolgoats.me
 ip: 18.116.175.145
 ```
 
@@ -34,4 +34,4 @@ ssh -i "Keypair-E0VicenteLavagnino.pem" ubuntu@ec2-18-116-175-145.us-east-2.comp
 
 ### Puntos Logrados
 
-En cuanto a los requisitos funcionales y no funcionales, se lograron todos los puntos de la parte mínima. En cuanto a los requisitos variables, se lograron todos los requisitos de la primera sección (HTTPS).
+En cuanto a los requisitos funcionales y no funcionales, se lograron todos los puntos de la parte mínima.
