@@ -23,10 +23,10 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000"],  # Ajusta según tu frontend
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],  # Headers permitidos
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Configuración de Auth0
@@ -174,17 +174,8 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
 
 
 @app.post("/buy_bond")
-<<<<<<< Updated upstream
-async def buy_bond_endpoint(
-    bond: BondPurchase = Body(...), current_user: dict = Depends(get_current_user)
-):
-    result = await buy_bond(
-        current_user["sub"], bond.fixture_id, bond.result, bond.amount
-    )
-=======
 async def buy_bond_endpoint(bond: BondPurchase = Body(...), current_user: dict = Depends(get_current_user)):
     result = await buy_bond(current_user['sub'], str(bond.fixture_id), bond.result, bond.amount)
->>>>>>> Stashed changes
     return result
 
 
