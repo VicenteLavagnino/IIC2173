@@ -37,6 +37,7 @@ async def save_fixture(data):
             for fixture in fixtures:
                 result = await collection.insert_one(fixture)
                 print(f"Fixture saved to MongoDB with id: {result.inserted_id}")
+                await initialize_fixture_bonds(fixture["fixtures"]["id"])
         else:
             result = await collection.insert_one(parsed_data)
             print(f"Data saved to MongoDB with id: {result.inserted_id}")
