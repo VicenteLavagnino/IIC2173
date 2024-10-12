@@ -72,7 +72,7 @@ async def get_user_by_auth0_id(auth0_id: str):
 
 # Crear un nuevo usuario con un wallet inicial
 async def create_user(email: str):
-    user = {"email": email, "wallet_balance": 0}  # Inicia con 0 en la billetera
+    user = {"email": email, "wallet": 0}  # Inicia con 0 en la billetera
     result = await users_collection.insert_one(user)
     return user
 
