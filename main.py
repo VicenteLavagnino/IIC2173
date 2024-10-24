@@ -1,21 +1,9 @@
-import os
-from datetime import datetime, timedelta
-
-import requests
-from bson import ObjectId
 from dotenv import load_dotenv
-from fastapi import Body, Depends, FastAPI, HTTPException, Query
-from fastapi.encoders import jsonable_encoder
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2AuthorizationCodeBearer
-from jose import jwt
-from jose.exceptions import JWTError
-from motor.motor_asyncio import AsyncIOMotorClient
-from pydantic import BaseModel
 
-from database import (  # Mantener la importación completa de develop
-    bonds_collection, buy_bond, collection, fixture_bonds_collection,
-    users_collection)
+# from routers import router as api_router
+from routers import users, bonds, fixtures
 
 load_dotenv()  # Carga las variables de entorno desde el archivo .env
 
@@ -29,214 +17,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configuración de Auth0
-AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN")
-AUTH0_CLIENT_ID = os.getenv("AUTH0_CLIENT_ID")
-AUTH0_CLIENT_SECRET = os.getenv("AUTH0_CLIENT_SECRET")
-AUTH0_AUDIENCE = os.getenv("AUTH0_AUDIENCE")
-ALGORITHMS = ["RS256"]
-
-oauth2_scheme = OAuth2AuthorizationCodeBearer(
-    authorizationUrl=f"https://{AUTH0_DOMAIN}/authorize",
-    tokenUrl=f"https://{AUTH0_DOMAIN}/oauth/token",
-)
-
-
-class User(BaseModel):
-    email: str
-    wallet: float = 0
-
-
-class BondPurchase(BaseModel):
-    fixture_id: str
-    result: str
-    amount: int
-
-
-class FundRequest(BaseModel):
-    amount: float
-
-
-# Función para obtener las claves públicas de Auth0
-def get_auth0_jwks():
-    response = requests.get(f"https://{AUTH0_DOMAIN}/.well-known/jwks.json")
-    jwks = response.json()
-    return jwks
-
-
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    try:
-        jwks = get_auth0_jwks()
-        unverified_header = jwt.get_unverified_header(token)
-        rsa_key = {}
-        for key in jwks["keys"]:
-            if key["kid"] == unverified_header["kid"]:
-                rsa_key = {
-                    "kty": key["kty"],
-                    "kid": key["kid"],
-                    "use": key["use"],
-                    "n": key["n"],
-                    "e": key["e"],
-                }
-        if rsa_key:
-            payload = jwt.decode(
-                token,
-                rsa_key,
-                algorithms=ALGORITHMS,
-                audience=AUTH0_AUDIENCE,
-                issuer=f"https://{AUTH0_DOMAIN}/",
-            )
-            return payload
-        else:
-            raise HTTPException(status_code=401, detail="Invalid token a")
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token b")
+app.include_router(bonds.router)
+app.include_router(fixtures.router)
+app.include_router(users.router)
 
 
 @app.get("/")
 async def root():
-    return {
-        "message": "Hola! Bienvenido a la API de la entrega 1 - IIC2173 - Grupo 8"
-    }  # Usando el mensaje de develop
-
-
-@app.get("/fixtures")
-async def get_fixtures(
-    current_user: dict = Depends(get_current_user),
-    page: int = Query(1, ge=1),
-    count: int = Query(25, ge=1),
-    home: str = None,
-    visit: str = None,
-    date: datetime = None,
-):
-    skip = (page - 1) * count
-    query = {}
-    if home:
-        query["teams.home.name"] = home
-        query["fixture.status.long"] = "Not Started"
-    if visit:
-        query["teams.away.name"] = visit
-        query["fixture.status.long"] = "Not Started"
-    if date:
-        start_date = datetime(date.year, date.month, date.day)
-        end_date = start_date + timedelta(days=1)
-        query["fixture.date"] = {
-            "$gte": start_date.strftime("%Y-%m-%dT%H:%M:%S"),
-            "$lt": end_date.strftime("%Y-%m-%dT%H:%M:%S"),
-        }
-        query["fixture.status.long"] = "Not Started"
-
-    total = await collection.count_documents(query)  # Calcular el total de documentos
-    cursor = collection.find(query).skip(skip).limit(count)
-    fixtures_list = await cursor.to_list(length=count)
-    return {
-        "fixtures": jsonable_encoder(fixtures_list, custom_encoder={ObjectId: str}),
-        "total": total,
-    }
-
-
-@app.get("/fixtures/{fixture_id}")
-async def get_fixture(fixture_id: str, current_user: dict = Depends(get_current_user)):
-    try:
-        fixture_id_int = int(fixture_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid fixture ID format")
-
-    # Buscar el fixture usando el campo fixture.id
-    data = await collection.find_one({"fixture.id": fixture_id_int})
-    if data:
-        return jsonable_encoder(data, custom_encoder={ObjectId: str})
-    else:
-        raise HTTPException(status_code=404, detail="Fixture not found")
-
-
-@app.post("/users")
-async def create_user(user: User, current_user: dict = Depends(get_current_user)):
-    user_data = user.dict()
-    user_data["auth0_id"] = current_user["sub"]
-    result = await users_collection.insert_one(user_data)
-    return {"message": "User created successfully", "id": str(result.inserted_id)}
-
-
-@app.get("/users")
-async def get_users(current_user: dict = Depends(get_current_user)):
-    cursor = users_collection.find({})
-    users_list = await cursor.to_list(length=100)
-    return jsonable_encoder(users_list, custom_encoder={ObjectId: str})
-
-
-@app.get("/users/me")
-async def get_current_user_info(current_user: dict = Depends(get_current_user)):
-    user = await users_collection.find_one({"auth0_id": current_user["sub"]})
-    if user:
-        return jsonable_encoder(user, custom_encoder={ObjectId: str})
-    raise HTTPException(status_code=404, detail="User not found")
-
-
-@app.post("/buy_bond")
-async def buy_bond_endpoint(bond: BondPurchase = Body(...), current_user: dict = Depends(get_current_user)):
-    result = await buy_bond(current_user['sub'], str(bond.fixture_id), bond.result, bond.amount)
-    return result
-
-
-@app.post("/add_funds")
-async def add_funds(
-    fund_request: FundRequest, current_user: dict = Depends(get_current_user)
-):
-    user = await users_collection.find_one({"auth0_id": current_user["sub"]})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    new_balance = user["wallet"] + fund_request.amount
-    await users_collection.update_one(
-        {"auth0_id": current_user["sub"]}, {"$set": {"wallet": new_balance}}
-    )
-    return {"message": "Funds added successfully", "new_balance": new_balance}
-
-
-@app.get("/fixtures/{fixture_id}/available_bonds")
-async def get_available_bonds(
-    fixture_id: str, current_user: dict = Depends(get_current_user)
-):
-    fixture_bonds = await fixture_bonds_collection.find_one(
-        {"fixture_id": int(fixture_id)}
-    )
-    if not fixture_bonds:
-        raise HTTPException(
-            status_code=404, detail="Fixture not found or bonds not initialized"
-        )
-    return {
-        "fixture_id": fixture_id,
-        "available_bonds": fixture_bonds["available_bonds"],
-    }
-
-
-@app.get("/users/me/purchased_bonds")
-async def get_purchased_bonds(current_user: dict = Depends(get_current_user)):
-    user_bonds = await bonds_collection.find(
-        {"user_auth0_id": current_user["sub"]}
-    ).to_list(None)
-
-    if not user_bonds:
-        return {"message": "No bonds purchased yet"}
-
-    formatted_bonds = []
-    for bond in user_bonds:
-        fixture = await collection.find_one({"fixture.id": int(bond["fixture_id"])})
-        formatted_bond = {
-            "request_id": bond["request_id"],
-            "fixture_id": bond["fixture_id"],
-            "result": bond["result"],
-            "amount": bond["amount"],
-            "status": bond["status"],
-            "fixture_details": {
-                "home_team": fixture["teams"]["home"]["name"],
-                "away_team": fixture["teams"]["away"]["name"],
-                "date": fixture["fixture"]["date"],
-            },
-        }
-        formatted_bonds.append(formatted_bond)
-
-    return jsonable_encoder(formatted_bonds, custom_encoder={ObjectId: str})
+    return {"message": "Hola! Bienvenido a la API de la entrega 1 - IIC2173 - Grupo 8"}
 
 
 if __name__ == "__main__":
