@@ -14,8 +14,12 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel
 
 from database import (  # Mantener la importación completa de develop
-    bonds_collection, buy_bond, collection, fixture_bonds_collection,
-    users_collection)
+    bonds_collection,
+    buy_bond,
+    collection,
+    fixture_bonds_collection,
+    users_collection,
+)
 
 load_dotenv()  # Carga las variables de entorno desde el archivo .env
 
@@ -177,8 +181,12 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
 
 
 @app.post("/buy_bond")
-async def buy_bond_endpoint(bond: BondPurchase = Body(...), current_user: dict = Depends(get_current_user)):
-    result = await buy_bond(current_user['sub'], str(bond.fixture_id), bond.result, bond.amount)
+async def buy_bond_endpoint(
+    bond: BondPurchase = Body(...), current_user: dict = Depends(get_current_user)
+):
+    result = await buy_bond(
+        current_user["sub"], str(bond.fixture_id), bond.result, bond.amount
+    )
     return result
 
 
