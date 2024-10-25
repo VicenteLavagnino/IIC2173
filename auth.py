@@ -4,6 +4,10 @@ from fastapi import Depends, HTTPException
 from jose import jwt
 from jose.exceptions import JWTError
 from fastapi.security import OAuth2AuthorizationCodeBearer
+from dotenv import load_dotenv
+
+
+load_dotenv()
 
 # Configuración de Auth0
 AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN")
