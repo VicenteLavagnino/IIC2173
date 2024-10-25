@@ -154,6 +154,8 @@ async def get_fixture(fixture_id: str, current_user: dict = Depends(get_current_
 async def create_user(user: User, current_user: dict = Depends(get_current_user)):
     user_data = user.dict()
     user_data["auth0_id"] = current_user["sub"]
+    print(current_user["sub"])
+    user_data["wallet"] = 0
     result = await users_collection.insert_one(user_data)
     return {"message": "User created successfully", "id": str(result.inserted_id)}
 
@@ -168,6 +170,7 @@ async def get_users(current_user: dict = Depends(get_current_user)):
 @app.get("/users/me")
 async def get_current_user_info(current_user: dict = Depends(get_current_user)):
     user = await users_collection.find_one({"auth0_id": current_user["sub"]})
+    print(current_user["sub"])
     if user:
         return jsonable_encoder(user, custom_encoder={ObjectId: str})
     raise HTTPException(status_code=404, detail="User not found")
