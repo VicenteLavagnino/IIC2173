@@ -35,6 +35,7 @@ jobs:
             AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
             AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET}
             AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
+            FRONTEND_URL=${FRONTEND_URL}
             EOT
           EOF
         env:
@@ -48,6 +49,7 @@ jobs:
           AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
           AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
           AUTH0_AUDIENCE: ${{ secrets.AUTH0_AUDIENCE }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
 
       - name: Deploy to EC2
         run: |
