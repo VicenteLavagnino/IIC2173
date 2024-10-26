@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # from routers import router as api_router
-from routers import users, bonds, fixtures
+from routers import users, bonds, fixtures, webpay
 
 load_dotenv()  # Carga las variables de entorno desde el archivo .env
 
@@ -11,7 +11,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Ajusta según tu frontend
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -20,6 +20,7 @@ app.add_middleware(
 app.include_router(bonds.router)
 app.include_router(fixtures.router)
 app.include_router(users.router)
+app.include_router(webpay.router)
 
 
 @app.get("/")

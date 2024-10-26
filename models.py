@@ -1,8 +1,8 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 
 class User(BaseModel):
-    email: EmailStr
+    email: str
     wallet: float = 0.0
 
 
