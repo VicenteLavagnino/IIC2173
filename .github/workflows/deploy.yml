@@ -19,7 +19,7 @@ jobs:
 
       - name: Create .env file on EC2
         run: |
-          ssh -i key.pem -o StrictHostKeyChecking=no ubuntu@18.116.175.145 << EOF
+          ssh -i key.pem -o StrictHostKeyChecking=no ubuntu@ec2-18-216-163-108.us-east-2.compute.amazonaws.com << EOF
             cd IIC2173-G8;
 
             # Create or update .env file on EC2
