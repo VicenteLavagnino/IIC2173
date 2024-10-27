@@ -14,7 +14,7 @@ router = APIRouter()
 async def webpay_plus_create(request: Request, amount: int):
     buy_order = str(random.randrange(1000000, 99999999))
     session_id = str(random.randrange(1000000, 99999999))
-    return_url = f"{FRONTEND_URL}/webpay/commit"
+    return_url = "https://web.e0futbol.me/webpay/commit"
 
     try:
         response = (Transaction()).create(buy_order, session_id, amount, return_url)
