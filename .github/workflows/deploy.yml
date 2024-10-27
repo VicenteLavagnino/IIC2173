@@ -55,6 +55,7 @@ jobs:
         run: |
           ssh -i key.pem -o StrictHostKeyChecking=no ubuntu@ec2-18-216-163-108.us-east-2.compute.amazonaws.com << EOF
             cd IIC2173-G8;
+            git pull;
 
             # Run Docker Compose for deployment
             export MONGO_URL="mongodb+srv://vicentelavagnino:vicente1559@e0.dhcuf.mongodb.net/?retryWrites=true&w=majority&appName=E0"
