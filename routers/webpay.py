@@ -22,7 +22,7 @@ async def webpay_plus_create(
 ):
     buy_order = str(uuid.uuid4())[:26]
     session_id = str(uuid.uuid4())[:26]
-    return_url = "http://localhost:3000/webpay/commit"
+    return_url = "https://web.e0futbol.me/webpay/commit"
 
     try:
         response = (Transaction()).create(buy_order, session_id, amount*1000, return_url)
@@ -33,7 +33,7 @@ async def webpay_plus_create(
         return JSONResponse(content={"url": response['url'], "token": response['token']})
     
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error creating transaction: {e}")
+        raise HTTPException(status_code=400, detail=f"{e}")
     
 
 @router.get("/webpay/commit")
