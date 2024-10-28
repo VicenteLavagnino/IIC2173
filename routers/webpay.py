@@ -45,14 +45,14 @@ async def webpay_plus_commit(token_ws: str):
             await handle_webpay_validation(token_ws=token_ws, status=True)
             return JSONResponse(content={
                 "status": "AUTHORIZED",
-                "message": "Transaction confirmed successfully",
+                "message": "Transacción autorizada. Redirigiendo...",
                 "details": response
             })
         else:
             await handle_webpay_validation(token_ws=token_ws, status=False)
             return JSONResponse(content={
                 "status": "FAILED",
-                "message": f"Transaction failed with response code {response['response_code']}",
+                "message": f"Transacción rechazada: {response['status']}",
                 "details": response 
             })
 
