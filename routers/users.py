@@ -22,6 +22,18 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
         return jsonable_encoder(user, custom_encoder={ObjectId: str})
     raise HTTPException(status_code=404, detail="User not found")
 
+@router.get("/users/balance")
+async def get_balance(current_user: dict = Depends(get_current_user)):
+    # Busca el usuario en la colección usando su ID de Auth0
+    user = await users_collection.find_one({"auth0_id": current_user["sub"]})
+    
+    # Si no se encuentra el usuario, lanza un error 404
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Devuelve el saldo actual del usuario
+    return {"balance": user["wallet"]}
+
 
 @router.post("/add_funds")
 async def add_funds(

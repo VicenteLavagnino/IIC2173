@@ -1,18 +1,30 @@
-# archivo que maneja la conexión del worker
+from .celery_config import celery_app
+import time
+from datetime import datetime, timezone
 
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-
-class Config:
-    CELERY_BROKER_URL: str = os.environ.get(
-        "CELERY_BROKER_URL", "redis://127.0.0.1:6379/0"
-    )
-    CELERY_RESULT_BACKEND: str = os.environ.get(
-        "CELERY_RESULT_BACKEND", "redis://127.0.0.1:6379/0"
-    )
+@celery_app.task(name="dummy_task")
+def dummy_task():
+    """
+    Tarea de prueba simple
+    """
+    time.sleep(5)
+    return {"status": "completed", "message": "Dummy task completed"}
 
 
-settings = Config()
+@celery_app.task(name="process_payment")
+def process_payment(amount: float, currency: str):
+    """
+    Procesa un pago y retorna el resultado
+    """
+    # Simulamos procesamiento
+    time.sleep(5)
+    
+    return {
+        "status": "success",
+        "transaction_details": {
+            "amount": amount,
+            "currency": currency,
+            "transaction_id": f"tx_{int(time.time())}",
+            "processed_at": datetime.now(timezone.utc).isoformat(),
+        }
+    }
