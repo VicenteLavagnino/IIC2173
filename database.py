@@ -136,7 +136,7 @@ async def handle_request(payload):
         quantity = data.get("quantity", 1)
 
         # Verificar si la solicitud es de otro grupo
-        if group_id != "8":  # Asumiendo que "8" es el ID de tu grupo
+        if group_id != "8": 
             await bond_requests_collection.insert_one(
                 {
                     "request_id": request_id,
@@ -196,7 +196,7 @@ async def handle_validation(payload):
         if our_bond:
             # Devolver el dinero al usuario
             await update_wallet_balance(
-                our_bond["user_auth0_id"], our_bond["amount"] * 1000
+                our_bond["user_auth0_id"], our_bond["quantity"] * 1000
             )
             await bonds_collection.update_one(
                 {"request_id": request_id}, {"$set": {"status": "invalid"}}
@@ -208,6 +208,58 @@ async def handle_validation(payload):
 
         print(f"Bono invalidado: {request_id}")
 
+async def handle_webpay_validation(token_ws: str, status: bool) :
+    if status :
+        bond = await bonds_collection.find_one_and_update(
+            {"token_ws": token_ws}, {"$set": {"status": "valid"}}
+        )
+
+        if not bond:
+            print(f"No bond found with token_ws: {token_ws}")
+            return 
+    
+        validation_message = {
+            "request_id": bond["request_id"],
+            "group_id": "8",
+            "seller": 0,
+            "valid": True,
+        }
+        publish.single(
+            "fixtures/validation",
+            payload=json.dumps(validation_message),
+            hostname=MQTT_HOST,
+            port=MQTT_PORT,
+            auth={"username": MQTT_USER, "password": MQTT_PASSWORD},
+        )
+        print(f"Mensaje enviado al broker: {json.dumps(validation_message)}")
+
+    else : 
+        bond = await bonds_collection.find_one_and_update(
+            {"token_ws": token_ws}, {"$set": {"status": "invalid"}}
+        )
+        if not bond:
+            print(f"No bond found with token_ws: {token_ws}")
+            return 
+        
+        validation_message = {
+            "request_id": bond["request_id"],
+            "group_id": "8",
+            "seller": 0,
+            "valid": False,
+        }
+        publish.single(
+            "fixtures/validation",
+            payload=json.dumps(validation_message),
+            hostname=MQTT_HOST,
+            port=MQTT_PORT,
+            auth={"username": MQTT_USER, "password": MQTT_PASSWORD},
+        )
+        print(f"Mensaje enviado al broker: {json.dumps(validation_message)}")
+
+        await restore_available_bonds(
+            bond["fixture_id"], bond["quantity"]
+        )
+        
 
 async def handle_history(payload):
 
@@ -266,7 +318,7 @@ async def process_bonds_for_fixture(fixture_id, result):
                     None,
                 )
                 if odds:
-                    prize = 1000 * bond["amount"] * float(odds["odd"])
+                    prize = 1000 * bond["quantity"] * float(odds["odd"])
                     await update_wallet_balance(bond["user_auth0_id"], prize)
                     print(f"Premio pagado: {prize} al usuario {bond['user_auth0_id']}")
 
@@ -315,6 +367,7 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
         "deposit_token": "",
         "datetime": datetime.utcnow().isoformat(),
         "quantity": amount,
+        "wallet": True,
         "seller": 0,
     }
 
@@ -333,8 +386,9 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
             "user_auth0_id": auth0_id,
             "fixture_id": fixture_id,
             "result": result,
-            "amount": amount,
+            "quantity": amount,
             "status": "pending",
+            "token_ws": "",
         }
     )
 
@@ -347,10 +401,69 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
     return {"message": "Bond purchase request sent", "request_id": request_id}
 
 
+async def buy_bond_webpay(auth0_id: str, fixture_id: str, result: str, amount: int, token: str):
+    user = await get_user_by_auth0_id(auth0_id)
+    fixture_id_int = int(fixture_id)
+    fixture = await collection.find_one({"fixture.id": fixture_id_int})
+
+    if not user:
+        return {"error": "User not found"}
+    if not fixture:
+        return {"error": "Fixture not found"}
+
+    bonds_available = await check_and_update_available_bonds(fixture_id_int, amount)
+    if not bonds_available:
+        return {"error": "No hay suficientes bonos disponibles para este partido"}
+
+    request_id = str(uuid.uuid4())
+
+    request_message = {
+        "request_id": request_id,
+        "group_id": "8",
+        "fixture_id": fixture_id,
+        "league_name": fixture["league"]["name"],
+        "round": fixture["league"]["round"],
+        "date": fixture["fixture"]["date"],
+        "result": result,
+        "deposit_token": token,
+        "datetime": datetime.utcnow().isoformat(),
+        "quantity": amount,
+        "wallet": False,
+        "seller": 0,
+    }
+
+    publish.single(
+        "fixtures/requests",
+        payload=json.dumps(request_message),
+        hostname=MQTT_HOST,
+        port=MQTT_PORT,
+        auth={"username": MQTT_USER, "password": MQTT_PASSWORD},
+    )
+    print(f"Mensaje enviado al broker: {json.dumps(request_message)}")
+
+    await bonds_collection.insert_one(
+        {
+            "request_id": request_id,
+            "user_auth0_id": auth0_id,
+            "fixture_id": fixture_id,
+            "result": result,
+            "quantity": amount,
+            "status": "pending",
+            "token_ws": token,
+        }
+    )
+
+    await collection.update_one(
+        {"id": fixture_id}, {"$inc": {"available_bonds": -amount}}
+    )
+
+    return {"message": "Bond purchase request sent", "request_id": request_id}
+
+
 async def restore_available_bonds(fixture_id, quantity):
     result = await fixture_bonds_collection.find_one_and_update(
-        {"fixture_id": fixture_id},
-        {"$inc": {"available_bonds": quantity}},
+        {"fixture_id": int(fixture_id)},
+        {"$inc": {"available_bonds": int(quantity)}},
         return_document=True,
     )
     if result:
