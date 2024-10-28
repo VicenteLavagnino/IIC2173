@@ -6,6 +6,7 @@ from fastapi import HTTPException
 from fastapi import APIRouter, HTTPException, Depends, Query
 from auth import get_current_user
 from database import buy_bond_webpay, handle_webpay_validation
+import uuid
 
 FRONTEND_URL = os.getenv("FRONTEND_URL")
 
@@ -19,8 +20,8 @@ async def webpay_plus_create(
     amount: int = Query(...),
     current_user: dict = Depends(get_current_user)
 ):
-    buy_order = str(random.randrange(1000000, 99999999))
-    session_id = str(random.randrange(1000000, 99999999))
+    buy_order = str(uuid.uuid4())[:26]
+    session_id = str(uuid.uuid4())[:26]
     return_url = "http://localhost:3000/webpay/commit"
 
     try:

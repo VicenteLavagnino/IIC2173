@@ -7,6 +7,7 @@ import paho.mqtt.publish as publish
 from bson import ObjectId
 from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
+from fastapi import HTTPException
 
 load_dotenv()
 
@@ -351,8 +352,9 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
         return {"error": "Insufficient funds"}
 
     bonds_available = await check_and_update_available_bonds(fixture_id_int, amount)
+
     if not bonds_available:
-        return {"error": "No hay suficientes bonos disponibles para este partido"}
+        raise HTTPException(status_code=400, detail="No hay suficientes bonos disponibles para este partido")
 
     request_id = str(uuid.uuid4())
 
@@ -394,11 +396,7 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
 
     await update_wallet_balance(auth0_id, -amount * 1000)
 
-    await collection.update_one(
-        {"id": fixture_id}, {"$inc": {"available_bonds": -amount}}
-    )
-
-    return {"message": "Bond purchase request sent", "request_id": request_id}
+    return {"message": "Solicitud de bono enviada", "request_id": request_id}
 
 
 async def buy_bond_webpay(auth0_id: str, fixture_id: str, result: str, amount: int, token: str):
@@ -412,8 +410,9 @@ async def buy_bond_webpay(auth0_id: str, fixture_id: str, result: str, amount: i
         return {"error": "Fixture not found"}
 
     bonds_available = await check_and_update_available_bonds(fixture_id_int, amount)
+
     if not bonds_available:
-        return {"error": "No hay suficientes bonos disponibles para este partido"}
+        raise HTTPException(status_code=400, detail="No hay suficientes bonos disponibles para este partido")
 
     request_id = str(uuid.uuid4())
 
@@ -453,11 +452,7 @@ async def buy_bond_webpay(auth0_id: str, fixture_id: str, result: str, amount: i
         }
     )
 
-    await collection.update_one(
-        {"id": fixture_id}, {"$inc": {"available_bonds": -amount}}
-    )
-
-    return {"message": "Bond purchase request sent", "request_id": request_id}
+    return {"message": "Solicitud de bono enviada", "request_id": request_id}
 
 
 async def restore_available_bonds(fixture_id, quantity):
