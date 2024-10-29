@@ -1,4 +1,5 @@
 #!/bin/bash
-cd /home/ubuntu/
+
+echo "Current Directory: $(pwd)"
 echo "Stop Application"
-docker compose --file compose.production.yml down
+docker compose --file /home/ubuntu/compose.production.yml down
