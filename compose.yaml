@@ -1,11 +1,21 @@
-version: '3.8'
+version: "3.8"
 
 services:
   api:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ["gunicorn", "main:app", "--worker-class", "uvicorn.workers.UvicornWorker", "--workers", "3", "--bind", "0.0.0.0:8000"]
+    command:
+      [
+        "gunicorn",
+        "main:app",
+        "--worker-class",
+        "uvicorn.workers.UvicornWorker",
+        "--workers",
+        "3",
+        "--bind",
+        "0.0.0.0:8000",
+      ]
     ports:
       - "8000:8000"
     volumes:
@@ -18,18 +28,18 @@ services:
       - MQTT_PORT=${MQTT_PORT}
       - MQTT_USER=${MQTT_USER}
       - MQTT_PASSWORD=${MQTT_PASSWORD}
-      
+
       # MongoDB Variables
       - MONGO_URL=${MONGO_URL}
       - MONGO_USERNAME=${MONGO_USERNAME}
       - MONGO_PASSWORD=${MONGO_PASSWORD}
-      
+
       # Auth0 Variables
       - AUTH0_DOMAIN=${AUTH0_DOMAIN}
       - AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
       - AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET}
       - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
-      
+
       # Celery Variables
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -43,7 +53,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ["celery", "-A", "worker.celery_config", "worker", "--loglevel=info"]
+    command:
+      ["celery", "-A", "worker.celery_config", "worker", "--loglevel=info"]
     volumes:
       - .:/app
     environment:
@@ -52,18 +63,18 @@ services:
       - MQTT_PORT=${MQTT_PORT}
       - MQTT_USER=${MQTT_USER}
       - MQTT_PASSWORD=${MQTT_PASSWORD}
-      
+
       # MongoDB Variables
       - MONGO_URL=${MONGO_URL}
       - MONGO_USERNAME=${MONGO_USERNAME}
       - MONGO_PASSWORD=${MONGO_PASSWORD}
-      
+
       # Auth0 Variables
       - AUTH0_DOMAIN=${AUTH0_DOMAIN}
       - AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
       - AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET}
       - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
-      
+
       # Celery Variables
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -75,7 +86,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ["celery", "-A", "worker.celery_config", "flower", "--port=5555"]
+    command:
+      [
+        "celery",
+        "-A",
+        "worker.celery_config.celery_app",
+        "flower",
+        "--port=5555",
+      ]
     ports:
       - "5555:5555"
     environment:
@@ -94,14 +112,14 @@ services:
       - MQTT_PORT=${MQTT_PORT}
       - MQTT_USER=${MQTT_USER}
       - MQTT_PASSWORD=${MQTT_PASSWORD}
-      
+
       # MongoDB Variables
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
       - MONGO_URL=${MONGO_URL}
       - MONGO_USERNAME=${MONGO_USERNAME}
       - MONGO_PASSWORD=${MONGO_PASSWORD}
-      
+
       # Auth0 Variables
       - AUTH0_DOMAIN=${AUTH0_DOMAIN}
       - AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
@@ -124,12 +142,12 @@ services:
       - MQTT_PORT=${MQTT_PORT}
       - MQTT_USER=${MQTT_USER}
       - MQTT_PASSWORD=${MQTT_PASSWORD}
-      
+
       # MongoDB Variables
       - MONGO_URL=${MONGO_URL}
       - MONGO_USERNAME=${MONGO_USERNAME}
       - MONGO_PASSWORD=${MONGO_PASSWORD}
-      
+
       # Auth0 Variables
       - AUTH0_DOMAIN=${AUTH0_DOMAIN}
       - AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
@@ -141,7 +159,7 @@ services:
         target: /app
     depends_on:
       - database
-      
+
   redis:
     image: redis:alpine
     ports:

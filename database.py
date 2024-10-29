@@ -7,7 +7,6 @@ import paho.mqtt.publish as publish
 from bson import ObjectId
 from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
-from worker.celery_config.task import process_recommendations
 
 load_dotenv()
 
@@ -316,7 +315,7 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
         "deposit_token": "",
         "datetime": datetime.utcnow().isoformat(),
         "quantity": amount,
-        "wallet" : bool, # Ver aca que bool ingresar. 
+        "wallet": bool,  # Ver aca que bool ingresar.
         "seller": 0,
     }
 

@@ -4,6 +4,8 @@ from auth import get_current_user
 from database import users_collection, bonds_collection, collection
 from fastapi.encoders import jsonable_encoder
 from bson import ObjectId
+from motor.motor_asyncio import AsyncIOMotorClient
+from celery.result import AsyncResult
 
 router = APIRouter()
 
@@ -22,15 +24,16 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
         return jsonable_encoder(user, custom_encoder={ObjectId: str})
     raise HTTPException(status_code=404, detail="User not found")
 
+
 @router.get("/users/balance")
 async def get_balance(current_user: dict = Depends(get_current_user)):
     # Busca el usuario en la colección usando su ID de Auth0
     user = await users_collection.find_one({"auth0_id": current_user["sub"]})
-    
+
     # Si no se encuentra el usuario, lanza un error 404
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     # Devuelve el saldo actual del usuario
     return {"balance": user["wallet"]}
 
@@ -47,32 +50,3 @@ async def add_funds(
         {"auth0_id": current_user["sub"]}, {"$set": {"wallet": new_balance}}
     )
     return {"message": "Funds added successfully", "new_balance": new_balance}
-
-
-@router.get("/users/me/purchased_bonds")
-async def get_purchased_bonds(current_user: dict = Depends(get_current_user)):
-    user_bonds = await bonds_collection.find(
-        {"user_auth0_id": current_user["sub"]}
-    ).to_list(None)
-
-    if not user_bonds:
-        return {"message": "No bonds purchased yet"}
-
-    formatted_bonds = []
-    for bond in user_bonds:
-        fixture = await collection.find_one({"fixture.id": int(bond["fixture_id"])})
-        formatted_bond = {
-            "request_id": bond["request_id"],
-            "fixture_id": bond["fixture_id"],
-            "result": bond["result"],
-            "amount": bond["amount"],
-            "status": bond["status"],
-            "fixture_details": {
-                "home_team": fixture["teams"]["home"]["name"],
-                "away_team": fixture["teams"]["away"]["name"],
-                "date": fixture["fixture"]["date"],
-            },
-        }
-        formatted_bonds.append(formatted_bond)
-
-    return jsonable_encoder(formatted_bonds, custom_encoder={ObjectId: str})
