@@ -42,7 +42,7 @@ En cuanto a los requisitos funcionales y no funcionales, se lograron todos los p
 
 2. Comenzar implementando Webpay en nuestro propio proyecto. Para esto, primero es necesario agregar la librería transbank-sdk a los requerimientos e importarlo donde estén los endpoints para los pagos de Webpay.
 
-3. Crear los endpoints de un pago Webpay en el backend. En este caso, solo fue necesario implementar los endpoints de GET /webpay/create y GET /webpay/commit. En esta parte, usando ChatGPT (https://chatgpt.com/) pudimos implememtar y adaptar el ejemplo de Python que ofrece Transbank de acuerdo a nuestras necesidades, ya que este estaba no estaba implementado con FastAPI.
+3. Crear los endpoints de un pago Webpay en el backend. En este caso, solo fue necesario implementar los endpoints de GET /webpay/create y GET /webpay/commit. En esta parte, usando ChatGPT (https://chatgpt.com/) pudimos implementar y adaptar el ejemplo de Python que ofrece Transbank de acuerdo a nuestras necesidades, ya que este estaba no estaba implementado con FastAPI.
 
 4. Una vez creados los endpoints en el backend, es necesario crear una vista en el frontend donde se pueda acceder al endpoint de /webpay/create. Esto lo hicimos con un botón en el modal de compra que da la opción de pago con Webpay. Cuando se oprime este botón, se hace una solicitud de GET al endpoint, enviando como parámetros el fixture_id, resultado y la cantidad de bonos comprados para futuro procesamiento de la compra. Esto fue logrado con ayuda de ChatGPT (https://chatgpt.com/).
 
