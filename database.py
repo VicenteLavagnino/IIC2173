@@ -369,9 +369,11 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
         "deposit_token": "",
         "datetime": datetime.utcnow().isoformat(),
         "quantity": amount,
-        "wallet": True,
+        "wallet": bool,  # Ver aca que bool ingresar. #Wallet: True si no funciona.
         "seller": 0,
     }
+
+    process_recommendations.delay(auth0_id)
 
     publish.single(
         "fixtures/requests",
