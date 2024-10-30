@@ -373,7 +373,7 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
         "seller": 0,
     }
 
-    process_recommendations.delay(auth0_id)
+    # process_recommendations.delay(auth0_id)
 
     publish.single(
         "fixtures/requests",
