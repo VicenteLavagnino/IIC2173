@@ -52,7 +52,10 @@ async def heartbeat():
     """
     task = workers_status.delay()
     result = AsyncResult(task.id)
-    return {"status": "operational", "result": result.result}
+    if result.successful() and result.result is True:
+        return {"status": "operational", "result": True}
+    else:
+        return {"status": "not operational", "result": False}
 
 
 @app.post("/job")
