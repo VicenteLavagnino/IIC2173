@@ -28,7 +28,7 @@ COPY . .
 
 EXPOSE 8000
 
-COPY --chown=appuser:appuser docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+#COPY --chown=appuser:appuser docker-entrypoint.sh /usr/local/bin/
+#RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 CMD ["gunicorn", "main:app", "--worker-class", "uvicorn.workers.UvicornWorker", "--workers", "3", "--bind", "0.0.0.0:8000"]
