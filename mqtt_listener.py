@@ -4,8 +4,7 @@ import os
 import paho.mqtt.client as mqtt
 from dotenv import load_dotenv
 
-from database import (handle_history, handle_request, handle_validation,
-                      save_fixture)
+from database import handle_history, handle_request, handle_validation, save_fixture
 
 load_dotenv()
 

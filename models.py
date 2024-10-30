@@ -15,6 +15,7 @@ class BondPurchase(BaseModel):
 class FundRequest(BaseModel):
     amount: float
 
+
 class MatchRecommendation(BaseModel):
     fixture_id: str
     home_team: str
@@ -25,6 +26,7 @@ class MatchRecommendation(BaseModel):
     odds: float
     recommendation_score: float
     historical_accuracy: float
+
 
 class RecommendationRequest(BaseModel):
     user_id: str

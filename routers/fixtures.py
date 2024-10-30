@@ -34,21 +34,29 @@ async def get_fixtures(
         }
         query["fixture.status.long"] = "Not Started"
 
-    total = await collection.count_documents(query)  # Calcular el total de documentos
+    # Calcular el total de documentos
+    total = await collection.count_documents(query)
     cursor = collection.find(query).skip(skip).limit(count)
     fixtures_list = await cursor.to_list(length=count)
     return {
-        "fixtures": jsonable_encoder(fixtures_list, custom_encoder={ObjectId: str}),
+        "fixtures": jsonable_encoder(
+            fixtures_list,
+            custom_encoder={
+                ObjectId: str}),
         "total": total,
     }
 
 
 @router.get("/fixtures/{fixture_id}")
-async def get_fixture(fixture_id: str, current_user: dict = Depends(get_current_user)):
+async def get_fixture(
+        fixture_id: str,
+        current_user: dict = Depends(get_current_user)):
     try:
         fixture_id_int = int(fixture_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid fixture ID format")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid fixture ID format")
 
     # Buscar el fixture usando el campo fixture.id
     data = await collection.find_one({"fixture.id": fixture_id_int})
@@ -67,8 +75,8 @@ async def get_available_bonds(
     )
     if not fixture_bonds:
         raise HTTPException(
-            status_code=404, detail="Fixture not found or bonds not initialized"
-        )
+            status_code=404,
+            detail="Fixture not found or bonds not initialized")
     return {
         "fixture_id": fixture_id,
         "available_bonds": fixture_bonds["available_bonds"],

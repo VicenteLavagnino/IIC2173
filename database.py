@@ -37,7 +37,9 @@ async def save_fixture(data):
             fixtures = parsed_data["fixtures"]
             for fixture in fixtures:
                 result = await collection.insert_one(fixture)
-                print(f"Fixture saved to MongoDB with id: {result.inserted_id}")
+                print(
+                    f"Fixture saved to MongoDB with id: {
+                        result.inserted_id}")
                 await initialize_fixture_bonds(fixture["fixtures"]["id"])
         else:
             result = await collection.insert_one(parsed_data)
@@ -119,8 +121,8 @@ async def check_and_update_available_bonds(fixture_id, quantity):
 
     if result:
         print(
-            f"Updated available bonds for fixture {fixture_id}. Remaining: {result['available_bonds']}"
-        )
+            f"Updated available bonds for fixture {fixture_id}. Remaining: {
+                result['available_bonds']}")
         return True
     else:
         print(f"No available bonds for fixture {fixture_id}")
@@ -137,7 +139,7 @@ async def handle_request(payload):
         quantity = data.get("quantity", 1)
 
         # Verificar si la solicitud es de otro grupo
-        if group_id != "8": 
+        if group_id != "8":
             await bond_requests_collection.insert_one(
                 {
                     "request_id": request_id,
@@ -209,16 +211,17 @@ async def handle_validation(payload):
 
         print(f"Bono invalidado: {request_id}")
 
-async def handle_webpay_validation(token_ws: str, status: bool) :
-    if status :
+
+async def handle_webpay_validation(token_ws: str, status: bool):
+    if status:
         bond = await bonds_collection.find_one_and_update(
             {"token_ws": token_ws}, {"$set": {"status": "valid"}}
         )
 
         if not bond:
             print(f"No bond found with token_ws: {token_ws}")
-            return 
-    
+            return
+
         validation_message = {
             "request_id": bond["request_id"],
             "group_id": "8",
@@ -234,14 +237,14 @@ async def handle_webpay_validation(token_ws: str, status: bool) :
         )
         print(f"Mensaje enviado al broker: {json.dumps(validation_message)}")
 
-    else : 
+    else:
         bond = await bonds_collection.find_one_and_update(
             {"token_ws": token_ws}, {"$set": {"status": "invalid"}}
         )
         if not bond:
             print(f"No bond found with token_ws: {token_ws}")
-            return 
-        
+            return
+
         validation_message = {
             "request_id": bond["request_id"],
             "group_id": "8",
@@ -257,10 +260,8 @@ async def handle_webpay_validation(token_ws: str, status: bool) :
         )
         print(f"Mensaje enviado al broker: {json.dumps(validation_message)}")
 
-        await restore_available_bonds(
-            bond["fixture_id"], bond["quantity"]
-        )
-        
+        await restore_available_bonds(bond["fixture_id"], bond["quantity"])
+
 
 async def handle_history(payload):
 
@@ -296,7 +297,9 @@ async def process_bonds_for_fixture(fixture_id, result):
     bonds = await bonds_collection.find(
         {"fixture_id": str(fixture_id), "status": "valid"}
     ).to_list(None)
-    print(f"Procesando {len(bonds)} bonos válidos para el fixture {fixture_id}")
+    print(
+        f"Procesando {
+            len(bonds)} bonos válidos para el fixture {fixture_id}")
 
     for bond in bonds:
         is_winner = (
@@ -321,7 +324,9 @@ async def process_bonds_for_fixture(fixture_id, result):
                 if odds:
                     prize = 1000 * bond["quantity"] * float(odds["odd"])
                     await update_wallet_balance(bond["user_auth0_id"], prize)
-                    print(f"Premio pagado: {prize} al usuario {bond['user_auth0_id']}")
+                    print(
+                        f"Premio pagado: {prize} al usuario {
+                            bond['user_auth0_id']}")
 
                 await bonds_collection.update_one(
                     {"_id": bond["_id"]}, {"$set": {"status": "won"}}
@@ -354,7 +359,10 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
     bonds_available = await check_and_update_available_bonds(fixture_id_int, amount)
 
     if not bonds_available:
-        raise HTTPException(status_code=400, detail="No hay suficientes bonos disponibles para este partido")
+        raise HTTPException(
+            status_code=400,
+            detail="No hay suficientes bonos disponibles para este partido",
+        )
 
     request_id = str(uuid.uuid4())
 
@@ -369,7 +377,8 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
         "deposit_token": "",
         "datetime": datetime.utcnow().isoformat(),
         "quantity": amount,
-        "wallet": bool,  # Ver aca que bool ingresar. #Wallet: True si no funciona.
+        # Ver aca que bool ingresar. #Wallet: True si no funciona.
+        "wallet": bool,
         "seller": 0,
     }
 
@@ -401,7 +410,9 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
     return {"message": "Solicitud de bono enviada", "request_id": request_id}
 
 
-async def buy_bond_webpay(auth0_id: str, fixture_id: str, result: str, amount: int, token: str):
+async def buy_bond_webpay(
+    auth0_id: str, fixture_id: str, result: str, amount: int, token: str
+):
     user = await get_user_by_auth0_id(auth0_id)
     fixture_id_int = int(fixture_id)
     fixture = await collection.find_one({"fixture.id": fixture_id_int})
@@ -414,7 +425,10 @@ async def buy_bond_webpay(auth0_id: str, fixture_id: str, result: str, amount: i
     bonds_available = await check_and_update_available_bonds(fixture_id_int, amount)
 
     if not bonds_available:
-        raise HTTPException(status_code=400, detail="No hay suficientes bonos disponibles para este partido")
+        raise HTTPException(
+            status_code=400,
+            detail="No hay suficientes bonos disponibles para este partido",
+        )
 
     request_id = str(uuid.uuid4())
 
@@ -465,8 +479,8 @@ async def restore_available_bonds(fixture_id, quantity):
     )
     if result:
         print(
-            f"Restored {quantity} bonds for fixture {fixture_id}. Now available: {result['available_bonds']}"
-        )
+            f"Restored {quantity} bonds for fixture {fixture_id}. Now available: {
+                result['available_bonds']}")
     else:
         print(f"Failed to restore bonds for fixture {fixture_id}")
 

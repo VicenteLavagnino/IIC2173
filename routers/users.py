@@ -18,7 +18,8 @@ async def get_users(current_user: dict = Depends(get_current_user)):
 
 
 @router.get("/users/me")
-async def get_current_user_info(current_user: dict = Depends(get_current_user)):
+async def get_current_user_info(
+        current_user: dict = Depends(get_current_user)):
     user = await users_collection.find_one({"auth0_id": current_user["sub"]})
     if user:
         return jsonable_encoder(user, custom_encoder={ObjectId: str})

@@ -12,50 +12,62 @@ FRONTEND_URL = os.getenv("FRONTEND_URL")
 
 router = APIRouter()
 
+
 # WEBPAY
 @router.get("/webpay/create")
 async def webpay_plus_create(
     fixture_id: str = Query(...),
     result: str = Query(...),
     amount: int = Query(...),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     buy_order = str(uuid.uuid4())[:26]
     session_id = str(uuid.uuid4())[:26]
     return_url = FRONTEND_URL + "/webpay/commit"
 
     try:
-        response = (Transaction()).create(buy_order, session_id, amount*1000, return_url)
+        response = (Transaction()).create(
+            buy_order, session_id, amount * 1000, return_url
+        )
         print(f"Webpay response: {response}")
         print(f"Compra por: {amount}")
-        result = await buy_bond_webpay(current_user["sub"], str(fixture_id), result, amount, response['token'])
+        result = await buy_bond_webpay(
+            current_user["sub"], str(fixture_id), result, amount, response["token"]
+        )
 
-        return JSONResponse(content={"url": response['url'], "token": response['token']})
-    
+        return JSONResponse(
+            content={"url": response["url"], "token": response["token"]}
+        )
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"{e}")
-    
+
 
 @router.get("/webpay/commit")
 async def webpay_plus_commit(token_ws: str):
     try:
         response = Transaction().commit(token=token_ws)
 
-        if response['status'] == 'AUTHORIZED':
+        if response["status"] == "AUTHORIZED":
             await handle_webpay_validation(token_ws=token_ws, status=True)
-            return JSONResponse(content={
-                "status": "AUTHORIZED",
-                "message": "Transacción autorizada. Redirigiendo...",
-                "details": response
-            })
+            return JSONResponse(
+                content={
+                    "status": "AUTHORIZED",
+                    "message": "Transacción autorizada. Redirigiendo...",
+                    "details": response,
+                }
+            )
         else:
             await handle_webpay_validation(token_ws=token_ws, status=False)
-            return JSONResponse(content={
-                "status": "FAILED",
-                "message": f"Transacción rechazada: {response['status']}",
-                "details": response 
-            })
+            return JSONResponse(
+                content={
+                    "status": "FAILED",
+                    "message": f"Transacción rechazada: {response['status']}",
+                    "details": response,
+                }
+            )
 
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error committing transaction: {e}")
-
+        raise HTTPException(
+            status_code=400, detail=f"Error committing transaction: {e}"
+        )

@@ -9,8 +9,8 @@ router = APIRouter()
 
 @router.post("/buy_bond")
 async def buy_bond_endpoint(
-    bond: BondPurchase = Body(...), current_user: dict = Depends(get_current_user)
-):
+        bond: BondPurchase = Body(...),
+        current_user: dict = Depends(get_current_user)):
     result = await buy_bond(
         current_user["sub"], str(bond.fixture_id), bond.result, bond.amount
     )
@@ -18,6 +18,7 @@ async def buy_bond_endpoint(
 
 
 @router.get("/bonds")
-async def get_user_bonds_endpoint(current_user: dict = Depends(get_current_user)):
+async def get_user_bonds_endpoint(
+        current_user: dict = Depends(get_current_user)):
     user_bonds = await collection.get_user_bonds(current_user["sub"])
     return {"bonds": user_bonds}
