@@ -3,6 +3,7 @@ version: '3.8'
 services:
   api:
     image: public.ecr.aws/f8e2v0r8/iic2173-g8-backend:latest
+    platform: linux/amd64
     ports:
       - "8000:8000"
     environment:
