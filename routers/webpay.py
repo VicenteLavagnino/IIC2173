@@ -22,7 +22,7 @@ async def webpay_plus_create(
 ):
     buy_order = str(uuid.uuid4())[:26]
     session_id = str(uuid.uuid4())[:26]
-    return_url = "https://web.e0futbol.me/webpay/commit"
+    return_url = FRONTEND_URL + "/webpay/commit"
 
     try:
         response = (Transaction()).create(buy_order, session_id, amount*1000, return_url)
