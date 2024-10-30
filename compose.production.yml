@@ -13,6 +13,12 @@ services:
       "3",
       "--bind",
       "0.0.0.0:8000",
+      "--timeout",
+      "120",
+      "--access-logfile",
+      "-",
+      "--error-logfile",
+      "-"
     ]
     ports:
       - "8000:8000"
@@ -23,7 +29,7 @@ services:
       - MQTT_USER=${MQTT_USER}
       - MQTT_PASSWORD=${MQTT_PASSWORD}
       # MongoDB Variables
-      - MONGO_URL=${MONGO_URL}
+      - MONGO_URL=mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@database:27017/
       - MONGO_USERNAME=${MONGO_USERNAME}
       - MONGO_PASSWORD=${MONGO_PASSWORD}
       # Auth0 Variables
@@ -35,16 +41,25 @@ services:
       # Celery Variables
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      # Temp directory configuration
+      - TMPDIR=/dev/shm
+    tmpfs:
+      - /dev/shm:exec,size=128M,mode=1777
+    restart: unless-stopped
     depends_on:
       - database
-      - mqtt_listener
       - redis
-      - worker
 
   worker:
     image: public.ecr.aws/f8e2v0r8/iic2173-g8-backend:latest
     platform: linux/amd64
-    command: ["celery", "-A", "worker.celery_config", "worker", "--loglevel=info"]
+    command: [
+      "celery",
+      "-A",
+      "worker.celery_config",
+      "worker",
+      "--loglevel=info"
+    ]
     environment:
       # MQTT Variables
       - MQTT_HOST=${MQTT_HOST}
@@ -52,7 +67,7 @@ services:
       - MQTT_USER=${MQTT_USER}
       - MQTT_PASSWORD=${MQTT_PASSWORD}
       # MongoDB Variables
-      - MONGO_URL=${MONGO_URL}
+      - MONGO_URL=mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@database:27017/
       - MONGO_USERNAME=${MONGO_USERNAME}
       - MONGO_PASSWORD=${MONGO_PASSWORD}
       # Auth0 Variables
@@ -63,9 +78,14 @@ services:
       # Celery Variables
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      # Temp directory configuration
+      - TMPDIR=/dev/shm
+    tmpfs:
+      - /dev/shm:exec,size=128M,mode=1777
+    restart: unless-stopped
     depends_on:
-      - redis
       - database
+      - redis
 
   flower:
     image: public.ecr.aws/f8e2v0r8/iic2173-g8-backend:latest
@@ -75,13 +95,18 @@ services:
       "-A",
       "worker.celery_config.celery_app",
       "flower",
-      "--port=5555",
+      "--port=5555"
     ]
     ports:
       - "5555:5555"
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      # Temp directory configuration
+      - TMPDIR=/dev/shm
+    tmpfs:
+      - /dev/shm:exec,size=128M,mode=1777
+    restart: unless-stopped
     depends_on:
       - redis
       - worker
@@ -89,6 +114,10 @@ services:
   mqtt_listener:
     image: public.ecr.aws/f8e2v0r8/iic2173-g8-backend:latest
     platform: linux/amd64
+    command: [
+      "python",
+      "mqtt_listener.py"
+    ]
     environment:
       # MQTT Variables
       - MQTT_HOST=${MQTT_HOST}
@@ -96,7 +125,7 @@ services:
       - MQTT_USER=${MQTT_USER}
       - MQTT_PASSWORD=${MQTT_PASSWORD}
       # MongoDB Variables
-      - MONGO_URL=${MONGO_URL}
+      - MONGO_URL=mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@database:27017/
       - MONGO_USERNAME=${MONGO_USERNAME}
       - MONGO_PASSWORD=${MONGO_PASSWORD}
       # Auth0 Variables
@@ -104,11 +133,17 @@ services:
       - AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
       - AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET}
       - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
+      # Temp directory configuration
+      - TMPDIR=/dev/shm
+    tmpfs:
+      - /dev/shm:exec,size=128M,mode=1777
+    restart: unless-stopped
     depends_on:
       - database
 
   database:
-    image: mongo
+    image: mongo:latest
+    command: mongod --auth
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
@@ -116,6 +151,7 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    restart: unless-stopped
 
   redis:
     image: redis:alpine
@@ -123,6 +159,7 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    restart: unless-stopped
 
 volumes:
   mongo_data:
