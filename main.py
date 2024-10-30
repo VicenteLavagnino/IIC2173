@@ -45,14 +45,14 @@ class JobRequest(BaseModel):
     currency: str
 
 
-@app.get("/heartbeat")
-async def heartbeat():
-    """
-    Indica si el servicio está operativo mediante la ejecución de una tarea de Celery.
-    """
-    task = workers_status.delay()
-    result = AsyncResult(task.id)
-    return {"status": "operational", "result": result.result}
+# @app.get("/heartbeat")
+# async def heartbeat():
+#     """
+#     Indica si el servicio está operativo mediante la ejecución de una tarea de Celery.
+#     """
+#     task = workers_status.delay()
+#     result = AsyncResult(task.id)
+#     return {"status": "operational", "result": result.result}
 
 
 @app.post("/job")
