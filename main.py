@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from routers import users, bonds, fixtures, webpay
 import asyncio
+from fastapi.encoders import jsonable_encoder
+from bson import ObjectId
 
 from worker.celery_config.tasks import (
     workers_status,
@@ -47,11 +49,12 @@ class JobRequest(BaseModel):
 
 @app.get("/heartbeat")
 async def heartbeat():
-    """
-    Indica si el servicio está operativo mediante la ejecución de una tarea de Celery.
-    """
     task = workers_status.delay()
     result = AsyncResult(task.id)
+
+    while not result.ready():
+        await asyncio.sleep(0.1)  
+
     if result.successful() and result.result is True:
         return {"status": "operational", "result": True}
     else:
@@ -101,7 +104,11 @@ async def get_task_status(task_id: str):
 @app.get("/recommendations")
 async def make_recommendation():
     task = random_recommendation.delay()
-    return {task}
+    result = AsyncResult(task.id)
+    while not result.ready():
+        await asyncio.sleep(0.1)
+    print(result.result)
+    return jsonable_encoder(result.result, custom_encoder={ObjectId: str})
 
 
 if __name__ == "__main__":

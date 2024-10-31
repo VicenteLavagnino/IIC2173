@@ -78,6 +78,8 @@ services:
       # Celery Variables
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+      - PYTHONPATH=/app/shared
     depends_on:
       - redis
       - database
@@ -100,6 +102,13 @@ services:
       # Celery Variables
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+      - MQTT_HOST=${MQTT_HOST}
+      - MQTT_PORT=${MQTT_PORT}
+      - MQTT_USER=${MQTT_USER}
+      - MQTT_PASSWORD=${MQTT_PASSWORD}
+
+      - PYTHONPATH=/app/shared
     depends_on:
       - redis
       - worker
