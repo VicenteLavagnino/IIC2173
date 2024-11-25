@@ -43,6 +43,8 @@ services:
       # Celery Variables
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+      - PYTHONPATH=/app
     depends_on:
       - database
       - mqtt_listener
@@ -56,7 +58,9 @@ services:
     command:
       ["celery", "-A", "worker.celery_config", "worker", "--loglevel=info"]
     volumes:
-      - .:/app
+      - type: bind
+        source: .
+        target: /app
     environment:
       # MQTT Variables
       - MQTT_HOST=${MQTT_HOST}
@@ -79,7 +83,7 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
 
-      - PYTHONPATH=/app/shared
+      - PYTHONPATH=/app
     depends_on:
       - redis
       - database
@@ -88,6 +92,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    volumes:
+      - type: bind
+        source: .
+        target: /app
     command:
       [
         "celery",
@@ -108,7 +116,7 @@ services:
       - MQTT_USER=${MQTT_USER}
       - MQTT_PASSWORD=${MQTT_PASSWORD}
 
-      - PYTHONPATH=/app/shared
+      - PYTHONPATH=/app
     depends_on:
       - redis
       - worker

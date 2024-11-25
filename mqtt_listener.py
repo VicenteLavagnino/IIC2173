@@ -4,7 +4,7 @@ import os
 import paho.mqtt.client as mqtt
 from dotenv import load_dotenv
 
-from database import handle_history, handle_request, handle_validation, save_fixture
+from database import handle_history, handle_request, handle_validation, save_fixture, handle_auctions
 
 load_dotenv()
 
@@ -38,6 +38,8 @@ def on_message(client, userdata, msg):
         asyncio.run_coroutine_threadsafe(handle_validation(payload), loop)
     elif topic == "fixtures/history":
         asyncio.run_coroutine_threadsafe(handle_history(payload), loop)
+    elif topic == "fixtures/auctions":
+        asyncio.run_coroutine_threadsafe(handle_auctions(payload), loop)
 
 
 def run_mqtt_client():

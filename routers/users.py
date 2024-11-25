@@ -51,3 +51,14 @@ async def add_funds(
         {"auth0_id": current_user["sub"]}, {"$set": {"wallet": new_balance}}
     )
     return {"message": "Funds added successfully", "new_balance": new_balance}
+
+
+@router.get("/users/me/purchased_bonds")
+async def get_purchased_bonds(
+        current_user: dict = Depends(get_current_user)):
+    bonds = await bonds_collection.find({"user_auth0_id": current_user["sub"]}).to_list(None)
+    if bonds:
+        print(bonds)
+        return jsonable_encoder(bonds, custom_encoder={ObjectId: str})
+    
+    raise HTTPException(status_code=404, detail="Bonds not found")

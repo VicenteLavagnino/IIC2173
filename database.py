@@ -20,6 +20,8 @@ bonds_collection = db["bonos"]
 users_collection = db["users"]
 fixture_bonds_collection = db["fixture_bonds"]
 bond_requests_collection = db["bond_requests"]
+group_bonds_collection = db["group_bonds"]
+
 
 MQTT_HOST = os.getenv("MQTT_HOST")
 MQTT_PORT = int(os.getenv("MQTT_PORT"))
@@ -293,6 +295,10 @@ async def handle_history(payload):
     print(f"Historial de {len(fixtures)} partidos procesado")
 
 
+async def handle_auctions(payload):
+    pass
+
+
 async def process_bonds_for_fixture(fixture_id, result):
     bonds = await bonds_collection.find(
         {"fixture_id": str(fixture_id), "status": "valid"}
@@ -378,7 +384,7 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
         "datetime": datetime.utcnow().isoformat(),
         "quantity": amount,
         # Ver aca que bool ingresar. #Wallet: True si no funciona.
-        "wallet": bool,
+        "wallet": True,
         "seller": 0,
     }
 
@@ -469,6 +475,69 @@ async def buy_bond_webpay(
     )
 
     return {"message": "Solicitud de bono enviada", "request_id": request_id}
+
+
+async def buy_bond_group(auth0_id: str, fixture_id: str, result: str, amount: int):
+    cost = amount * 1000
+    user = await get_user_by_auth0_id(auth0_id)
+    fixture_id_int = int(fixture_id)
+    fixture = await collection.find_one({"fixture.id": fixture_id_int})
+
+    if not user :
+        return {"error": "User not found"}
+    if not fixture :
+        return {"error": "Fixture not found"}
+    if user["wallet"] < cost :
+        return {"error": "Insufficient funds"}
+
+    bonds_available = await check_and_update_available_bonds(fixture_id_int, amount)
+
+    if not bonds_available:
+        raise HTTPException(
+            status_code=400,
+            detail="No hay suficientes bonos disponibles para este partido",
+        )
+
+    request_id = str(uuid.uuid4())
+    
+    request_message = {
+        "request_id": request_id,
+        "group_id": "8",
+        "fixture_id": fixture_id,
+        "league_name": fixture["league"]["name"],
+        "round": fixture["league"]["round"],
+        "date": fixture["fixture"]["date"],
+        "result": result,
+        "deposit_token": "",
+        "datetime": datetime.utcnow().isoformat(),
+        "quantity": amount,
+        "wallet": True,
+        "seller": 8,
+    }
+
+    publish.single(
+        "fixtures/requests",
+        payload=json.dumps(request_message),
+        hostname=MQTT_HOST,
+        port=MQTT_PORT,
+        auth={"username": MQTT_USER, "password": MQTT_PASSWORD},
+    )
+    print(f"Mensaje enviado al broker: {json.dumps(request_message)}")
+
+    await group_bonds_collection.insert_one(
+        {
+            "request_id": request_id,
+            "user_auth0_id": auth0_id,
+            "fixture_id": fixture_id,
+            "result": result,
+            "quantity": amount,
+            "status": "pending",
+        }
+    )
+
+    await update_wallet_balance(auth0_id, -amount * 1000)
+
+    return {"message": "Solicitud de compra grupal enviada", "request_id": request_id}
 
 
 async def restore_available_bonds(fixture_id, quantity):
