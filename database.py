@@ -173,7 +173,6 @@ async def handle_validation(payload):
     data = json.loads(payload)
     request_id = data.get("request_id")
     is_valid = data.get("valid")
-
     our_bond = await bonds_collection.find_one({"request_id": request_id})
     other_bond = await bond_requests_collection.find_one({"request_id": request_id})
 
@@ -451,7 +450,6 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
         "deposit_token": "",
         "datetime": datetime.utcnow().isoformat(),
         "quantity": amount,
-        # Ver aca que bool ingresar. #Wallet: True si no funciona.
         "wallet": True,
         "seller": 0,
     }
@@ -592,13 +590,16 @@ async def buy_bond_group(auth0_id: str, fixture_id: str, result: str, amount: in
     )
     print(f"Mensaje enviado al broker: {json.dumps(request_message)}")
 
+
     await group_bonds_collection.insert_one(
         {
             "request_id": request_id,
-            "user_auth0_id": auth0_id,
             "fixture_id": fixture_id,
+            "league_name": fixture["league"]["name"],
+            "round": fixture["league"]["round"],
             "result": result,
-            "quantity": amount,
+            "restantes": amount,
+            "ofrecidos": 0,
             "status": "pending",
         }
     )
