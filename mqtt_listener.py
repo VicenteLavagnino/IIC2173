@@ -48,8 +48,13 @@ def run_mqtt_client():
     client.on_message = on_message
     client.username_pw_set(user, password)
     client.connect(host, port, 60)
-    client.loop_forever()
-
+    client.loop_start() 
 
 if __name__ == "__main__":
-    run_mqtt_client()
+    try:
+        run_mqtt_client()
+        loop.run_forever()
+    except KeyboardInterrupt:
+        print("Exiting MQTT listener...")
+    finally:
+        loop.close()
