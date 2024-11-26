@@ -296,7 +296,75 @@ async def handle_history(payload):
 
 
 async def handle_auctions(payload):
-    pass
+    try:
+        data = json.loads(payload)
+
+        auction_type = data.get("type")
+        auction_id = data.get("auction_id")
+        proposal_id = data.get("proposal_id", "")
+        fixture_id = data.get("fixture_id")
+        league_name = data.get("league_name")
+        round_name = data.get("round")
+        result = data.get("result")
+        quantity = data.get("quantity")
+        group_id = data.get("group_id")
+
+        if auction_type == "offer":
+            await bond_requests_collection.insert_one(
+                {
+                    "auction_id": auction_id,
+                    "fixture_id": fixture_id,
+                    "league_name": league_name,
+                    "round": round_name,
+                    "result": result,
+                    "quantity": quantity,
+                    "group_id": group_id,
+                    "type": auction_type,
+                    "status": "pending",
+                }
+            )
+            print(f"Oferta registrada para la subasta: {auction_id}")
+
+        elif auction_type == "proposal":
+            await bond_requests_collection.insert_one(
+                {
+                    "auction_id": auction_id,
+                    "proposal_id": proposal_id,
+                    "fixture_id": fixture_id,
+                    "league_name": league_name,
+                    "round": round_name,
+                    "result": result,
+                    "quantity": quantity,
+                    "group_id": group_id,
+                    "type": auction_type,
+                    "status": "pending",
+                }
+            )
+            print(f"Propuesta de intercambio registrada: {proposal_id}")
+
+        elif auction_type in ["acceptance", "rejection"]:
+            status = "accepted" if auction_type == "acceptance" else "rejected"
+            result = await bond_requests_collection.find_one_and_update(
+                {"proposal_id": proposal_id},
+                {"$set": {"status": status}},
+                return_document=True,
+            )
+
+            if result and auction_type == "acceptance":
+                await check_and_update_available_bonds(result["fixture_id"], result["quantity"])
+                print(f"Propuesta aceptada: {proposal_id}")
+            elif result:
+                print(f"Propuesta rechazada: {proposal_id}")
+            else:
+                print(f"No se encontró la propuesta para el ID: {proposal_id}")
+        else:
+            print(f"Tipo de mensaje desconocido: {auction_type}")
+
+    except json.JSONDecodeError as e:
+        print(f"Error decodificando JSON en handle_auctions: {e}")
+    except Exception as e:
+        print(f"Error en handle_auctions: {e}")
+
 
 
 async def process_bonds_for_fixture(fixture_id, result):
