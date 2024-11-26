@@ -39,9 +39,7 @@ async def save_fixture(data):
             fixtures = parsed_data["fixtures"]
             for fixture in fixtures:
                 result = await collection.insert_one(fixture)
-                print(
-                    f"Fixture saved to MongoDB with id: {
-                        result.inserted_id}")
+                print(f"Fixture saved to MongoDB with id: {result.inserted_id}")
                 await initialize_fixture_bonds(fixture["fixtures"]["id"])
         else:
             result = await collection.insert_one(parsed_data)
@@ -122,9 +120,7 @@ async def check_and_update_available_bonds(fixture_id, quantity):
         )
 
     if result:
-        print(
-            f"Updated available bonds for fixture {fixture_id}. Remaining: {
-                result['available_bonds']}")
+        print(f"Updated available bonds for fixture {fixture_id}. Remaining: {result['available_bonds']}")
         return True
     else:
         print(f"No available bonds for fixture {fixture_id}")
@@ -371,8 +367,7 @@ async def process_bonds_for_fixture(fixture_id, result):
         {"fixture_id": str(fixture_id), "status": "valid"}
     ).to_list(None)
     print(
-        f"Procesando {
-            len(bonds)} bonos válidos para el fixture {fixture_id}")
+        f"Procesando {len(bonds)} bonos válidos para el fixture {fixture_id}")
 
     for bond in bonds:
         is_winner = (
@@ -397,9 +392,7 @@ async def process_bonds_for_fixture(fixture_id, result):
                 if odds:
                     prize = 1000 * bond["quantity"] * float(odds["odd"])
                     await update_wallet_balance(bond["user_auth0_id"], prize)
-                    print(
-                        f"Premio pagado: {prize} al usuario {
-                            bond['user_auth0_id']}")
+                    print(f"Premio pagado: {prize} al usuario {bond['user_auth0_id']}")
 
                 await bonds_collection.update_one(
                     {"_id": bond["_id"]}, {"$set": {"status": "won"}}
@@ -616,9 +609,7 @@ async def restore_available_bonds(fixture_id, quantity):
         return_document=True,
     )
     if result:
-        print(
-            f"Restored {quantity} bonds for fixture {fixture_id}. Now available: {
-                result['available_bonds']}")
+        print(f"Restored {quantity} bonds for fixture {fixture_id}. Now available: {result['available_bonds']}")
     else:
         print(f"Failed to restore bonds for fixture {fixture_id}")
 
