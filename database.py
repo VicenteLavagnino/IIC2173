@@ -344,12 +344,12 @@ async def handle_auctions(payload):
                     {
                         "auction_id": auction_id,
                         "proposal_id": proposal_id,
-                        "fixture_id": fixture_id,
+                        "fixture_id": int(fixture_id),
                         "league_name": league_name,
                         "round": round_name,
                         "result": result,
-                        "quantity": quantity,
-                        "group_id": group_id,
+                        "quantity": int(quantity),
+                        "group_id": int(group_id),
                         "type": auction_type,
                         "status": "pending",
                     }
@@ -360,14 +360,44 @@ async def handle_auctions(payload):
         elif auction_type in ["acceptance", "rejection"] :
             status = "accepted" if auction_type == "acceptance" else "rejected"
             result = await group_proposals_collection.find_one_and_update( {"proposal_id": proposal_id}, {"$set": {"status": status}}, return_document=True )
-            if result :
+            if result : # Si es nuestra propuesta
                     if status == "accepted" :
                         print(f"Nuestra propuesta fue aceptada por el otro grupo: {proposal_id}")
-                        await check_and_update_available_bonds(result["fixture_id"], result["quantity"])
+
+                        new_bonds = await other_group_offers_collection.find_one_and_update( {"auction_id": auction_id}, {"$set": {"status": status}}, return_document=True )
+                        if new_bonds :
+                            request_id = str(uuid.uuid4())
+                            await group_bonds_collection.insert_one(
+                                {
+                                    "request_id": request_id,
+                                    "fixture_id": new_bonds["fixture_id"],
+                                    "league_name": new_bonds["league_name"],
+                                    "round": new_bonds["round"],
+                                    "result": new_bonds["result"],
+                                    "restantes": new_bonds["quantity"],
+                                    "ofrecidos": 0,
+                                    "status": "pending",
+                                }
+                            )
+                        else :
+                            print(f"No se encontraron los nuevos bonos: {auction_id}")
                     else :
+                        request_id = str(uuid.uuid4())
+                        await group_bonds_collection.insert_one(
+                            {
+                                "request_id": request_id,
+                                "fixture_id": fixture_id,
+                                "league_name": league_name,
+                                "round": round_name,
+                                "result": result,
+                                "restantes": quantity,
+                                "ofrecidos": 0,
+                                "status": "pending",
+                            }
+                        )
                         print(f"Nuestra propuesta fue rechazada por el otro grupo: {proposal_id}")
             
-            else :
+            else : # Si es propuesta de otro grupo
                 result = await other_group_offers_collection.find_one_and_update( {"auction_id": auction_id}, {"$set": {"status": status}}, return_document=True )
                 if result :
                     if status == "accepted" :
@@ -474,8 +504,6 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
         "seller": 0,
     }
 
-    # process_recommendations.delay(auth0_id)
-
     publish.single(
         "fixtures/requests",
         payload=json.dumps(request_message),
@@ -559,7 +587,6 @@ async def buy_bond_webpay(
             "token_ws": token,
         }
     )
-
     return {"message": "Solicitud de bono enviada", "request_id": request_id}
 
 
@@ -630,34 +657,107 @@ async def buy_bond_group(auth0_id: str, fixture_id: str, result: str, amount: in
 
 
 async def offer_bonds(fixture_id: str, league_name: str, fixture_round: str, result: str, quantity: int):
-    auction_id = str(uuid.uuid4())
 
-    offer_message = {
-        "auction_id": auction_id,
-        "proposal_id": "",
-        "fixture_id": int(fixture_id),
-        "league": league_name,
-        "round": fixture_round,
-        "result": result,
-        "quantity": quantity,
-        "group_id": 7,
-        "type": "offer",
-    }
-
-    publish.single(
-        "fixtures/auctions",
-        payload=json.dumps(offer_message),
-        hostname=MQTT_HOST,
-        port=MQTT_PORT,
-        auth={"username": MQTT_USER, "password": MQTT_PASSWORD},
+    updated = await group_bonds_collection.find_one_and_update(
+        {"fixture_id": fixture_id, "restantes": {"$gte": quantity}},
+        {"$inc": {"restantes": -quantity, "ofrecidos": quantity}},
+        return_document=True,
     )
-    group_offers_collection.insert_one(offer_message)
-    offer_message["_id"] = str(offer_message["_id"])
     
-    print(f"Mensaje enviado al broker: {json.dumps(offer_message)}")
+    if updated:
+        auction_id = str(uuid.uuid4())
 
-    return {"message": "Oferta de bonos enviada", "auction_id": auction_id}
+        offer_message = {
+            "auction_id": auction_id,
+            "proposal_id": "",
+            "fixture_id": int(fixture_id),
+            "league": league_name,
+            "round": fixture_round,
+            "result": result,
+            "quantity": quantity,
+            "group_id": 8,
+            "type": "offer",
+        }
 
+        publish.single(
+            "fixtures/auctions",
+            payload=json.dumps(offer_message),
+            hostname=MQTT_HOST,
+            port=MQTT_PORT,
+            auth={"username": MQTT_USER, "password": MQTT_PASSWORD},
+        )
+
+        await group_offers_collection.insert_one(
+            {
+                "auction_id": auction_id,
+                "proposal_id": "",
+                "fixture_id": int(fixture_id),
+                "league_name": league_name,
+                "round": fixture_round,
+                "result": result,
+                "quantity": quantity,
+                "group_id": 8,
+                "type": "offer",
+            }
+        )
+
+        print(f"Mensaje enviado al broker: {json.dumps(offer_message)}")
+        return {"message": "Oferta de bonos enviada", "auction_id": auction_id}
+
+    else:
+        print("Hubo un error")
+        return {"error": "Hubo un error al ofertar el bono."}
+    
+
+async def propose_bonds(auction_id: str, fixture_id: str, league_name: str, fixture_round: str, result: str, quantity: int):
+    updated = await group_bonds_collection.find_one_and_update(
+        {"fixture_id": fixture_id, "restantes": {"$gte": quantity}},
+        {"$inc": {"restantes": -quantity, "ofrecidos": quantity}},
+        return_document=True,
+    )
+    if updated :
+        proposal_id = str(uuid.uuid4())
+
+        proposal_message = {
+            "auction_id": auction_id,
+            "proposal_id": proposal_id,
+            "fixture_id": int(fixture_id),
+            "league_name": league_name,
+            "round": fixture_round,
+            "result": result,
+            "quantity": quantity,
+            "group_id": 8,
+            "type": "proposal",
+        }
+
+        publish.single(
+            "fixtures/auctions",
+            payload=json.dumps(proposal_message),
+            hostname=MQTT_HOST,
+            port=MQTT_PORT,
+            auth={"username": MQTT_USER, "password": MQTT_PASSWORD},
+        )
+
+        await group_proposals_collection.insert_one(
+            {
+                "auction_id": auction_id,
+                "proposal_id": proposal_id,
+                "fixture_id": int(fixture_id),
+                "league": league_name,
+                "round": fixture_round,
+                "result": result,
+                "quantity": quantity,
+                "group_id": 8,
+                "type": "proposal",
+                "status": "pending",
+            }
+        )
+
+        print(f"Mensaje enviado al broker: {json.dumps(proposal_message)}")
+        return {"message": "Propuesta de intercambio enviada", "proposal_id": proposal_id}
+    else:
+        print("Hubo un error")
+        return {"error": "Hubo un error al proponer el intercambio."}
 
 
 async def restore_available_bonds(fixture_id, quantity):

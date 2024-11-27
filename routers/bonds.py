@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from models import BondPurchase, BondOffer, BondProposal
 from auth import get_current_user
 from fastapi import Body, Depends
-from database import buy_bond, buy_bond_group, group_bonds_collection, offer_bonds, other_group_offers_collection, group_offers_collection
+from database import buy_bond, buy_bond_group, group_bonds_collection, offer_bonds, other_group_offers_collection, group_offers_collection, propose_bonds, other_group_proposals_collection
 
 router = APIRouter()
 
@@ -69,4 +69,17 @@ async def create_bonds_proposal(
     bond_proposal: BondProposal = Body(...),
 ):
     print(bond_proposal.dict())
+    result = await propose_bonds(bond_proposal.auction_id, bond_proposal.fixture_id, bond_proposal.league_name, bond_proposal.fixture_round, bond_proposal.result, bond_proposal.quantity)
+
+    return result
+
+@router.get("/bonds/proposed")
+async def get_proposed_bonds():
+    print("Getting proposed bonds...")
+    bonds = await other_group_proposals_collection.find().to_list(length=None)
+    for bond in bonds:
+        bond["_id"] = str(bond["_id"])
+    print(bonds)
+    return bonds
+
     
