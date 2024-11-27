@@ -46,16 +46,16 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       
-      # Temp directory configuration
-      - TMPDIR=/dev/shm
-      - PYTHONPATH=/app/shared
+      - PYTHONPATH=/app
 
     tmpfs:
       - /dev/shm:exec,size=128M,mode=1777
     restart: unless-stopped
     depends_on:
       - database
+      - mqtt_listener
       - redis
+      - worker
 
   worker:
     image: public.ecr.aws/f8e2v0r8/iic2173-g8-backend:latest
@@ -89,9 +89,7 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       
-      # Temp directory configuration
-      - TMPDIR=/dev/shm
-      - PYTHONPATH=/app/shared
+      - PYTHONPATH=/app
 
     tmpfs:
       - /dev/shm:exec,size=128M,mode=1777
@@ -115,8 +113,6 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - TMPDIR=/dev/shm
-      - PYTHONPATH=/app/shared
       
       # MQTT Variables
       - MQTT_HOST=${MQTT_HOST}
@@ -138,6 +134,8 @@ services:
       # Celery Variables
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+      - PYTHONPATH=/app
 
     tmpfs:
       - /dev/shm:exec,size=128M,mode=1777
@@ -171,9 +169,7 @@ services:
       - AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET}
       - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
       
-      # Temp directory configuration
-      - TMPDIR=/dev/shm
-      - PYTHONPATH=/app/shared
+      - PYTHONPATH=/app
 
     tmpfs:
       - /dev/shm:exec,size=128M,mode=1777
