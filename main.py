@@ -61,6 +61,16 @@ async def heartbeat():
         return {"status": "not operational", "result": False}
 
 
+@app.get("/version")
+async def get_version():
+    try:
+        with open("VERSION", "r") as version_file:
+            version = version_file.read().strip()
+        return {"version": version}
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="VERSION file not found")
+
+
 @app.post("/job")
 async def create_job(job_data: JobRequest):
     task = process_payment.delay(job_data.amount, job_data.currency)
