@@ -5,12 +5,11 @@ class User(BaseModel):
     email: str
     wallet: float = 0.0
 
-
 class BondPurchase(BaseModel):
     fixture_id: str
     result: str
     amount: int
-
+    discount: int
 
 class BondOffer(BaseModel):
     fixture_id: str
@@ -27,10 +26,8 @@ class BondProposal(BaseModel):
     result: str
     quantity: int
 
-
 class FundRequest(BaseModel):
     amount: float
-
 
 class MatchRecommendation(BaseModel):
     fixture_id: str
@@ -42,7 +39,6 @@ class MatchRecommendation(BaseModel):
     odds: float
     recommendation_score: float
     historical_accuracy: float
-
 
 class RecommendationRequest(BaseModel):
     user_id: str

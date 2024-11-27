@@ -171,9 +171,7 @@ async def handle_request(payload):
 
 
 async def handle_validation(payload):
-
-    print("validation")
-
+    print("Validando bono...")
     data = json.loads(payload)
     request_id = data.get("request_id")
     is_valid = data.get("valid")
@@ -465,8 +463,8 @@ async def process_bonds_for_fixture(fixture_id, result):
         print(f"Estado actualizado del bono: {updated_bond['status']}")
 
 
-async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
-    cost = amount * 1000
+async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int, discount: int):
+    cost = ( amount * 1000 ) - ( amount * discount )
     user = await get_user_by_auth0_id(auth0_id)
     fixture_id_int = int(fixture_id)
     fixture = await collection.find_one({"fixture.id": fixture_id_int})
@@ -524,9 +522,56 @@ async def buy_bond(auth0_id: str, fixture_id: str, result: str, amount: int):
         }
     )
 
-    await update_wallet_balance(auth0_id, -amount * 1000)
+    await update_wallet_balance(auth0_id, -cost)
 
     return {"message": "Solicitud de bono enviada", "request_id": request_id}
+
+
+async def buy_bond_to_group(auth0_id: str, fixture_id: str, result: str, amount: int, discount: int, token_ws: str):
+    cost = ( amount * 1000 ) - ( amount * discount )
+    user = await get_user_by_auth0_id(auth0_id)
+    fixture_id_int = int(fixture_id)
+    fixture = await collection.find_one({"fixture.id": fixture_id_int})
+
+    if not user:
+        return {"error": "User not found"}
+    if not fixture:
+        return {"error": "Fixture not found"}
+    if user["wallet"] < cost:
+        return {"error": "Insufficient funds"}
+
+    bonds_available = await group_bonds_collection.find_one_and_update(
+        {"fixture_id": fixture_id, "restantes": {"$gte": amount}},
+        {"$inc": {"restantes": -amount}},
+        return_document=True,
+    )
+
+    if not bonds_available:
+        raise HTTPException(
+            status_code=400,
+            detail="No hay suficientes bonos disponibles para este partido.",
+        )
+    
+    print(f"Bono grupal actualizado: {bonds_available}")
+
+    request_id = str(uuid.uuid4())
+
+    await bonds_collection.insert_one(
+        {
+            "request_id": request_id,
+            "user_auth0_id": auth0_id,
+            "fixture_id": fixture_id,
+            "result": result,
+            "quantity": amount,
+            "status": "pending",
+            "token_ws": token_ws,
+        }
+    )
+
+    await update_wallet_balance(auth0_id, -cost)
+    print(f"Cantidad de bonos comprados al grupo: {amount}")
+
+    return {"message": "Bono grupal comprado exitosamente.", "request_id": request_id}
 
 
 async def buy_bond_webpay(

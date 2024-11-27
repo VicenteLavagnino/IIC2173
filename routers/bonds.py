@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from models import BondPurchase, BondOffer, BondProposal
 from auth import get_current_user
 from fastapi import Body, Depends
-from database import buy_bond, buy_bond_group, group_bonds_collection, offer_bonds, other_group_offers_collection, group_offers_collection, propose_bonds, other_group_proposals_collection
+from database import buy_bond, buy_bond_group, group_bonds_collection, offer_bonds, other_group_offers_collection, group_offers_collection, propose_bonds, other_group_proposals_collection, buy_bond_to_group
 
 router = APIRouter()
 
@@ -12,7 +12,16 @@ async def buy_bond_endpoint(
         bond: BondPurchase = Body(...),
         current_user: dict = Depends(get_current_user)):
     result = await buy_bond(
-        current_user["sub"], str(bond.fixture_id), bond.result, bond.amount
+        current_user["sub"], str(bond.fixture_id), bond.result, bond.amount, bond.discount
+    )
+    return result
+
+@router.post("/bonds/group/buy_bond")
+async def buy_bond_group_endpoint( 
+    bond: BondPurchase = Body(...),
+    current_user: dict = Depends(get_current_user)):
+    result = await buy_bond_to_group(
+        current_user["sub"], str(bond.fixture_id), bond.result, bond.amount, bond.discount, token_ws=""
     )
     return result
 
