@@ -1,6 +1,5 @@
 import asyncio
 import os
-
 import paho.mqtt.client as mqtt
 from dotenv import load_dotenv
 
@@ -23,6 +22,7 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe("fixtures/requests")
     client.subscribe("fixtures/validation")
     client.subscribe("fixtures/history")
+    client.subscribe("fixtures/auctions")
 
 
 def on_message(client, userdata, msg):

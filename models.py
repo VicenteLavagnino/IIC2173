@@ -19,6 +19,14 @@ class BondOffer(BaseModel):
     result: str
     quantity: int
 
+class BondProposal(BaseModel):
+    auction_id: str
+    fixture_id: str
+    league_name: str
+    fixture_round: str
+    result: str
+    quantity: int
+
 
 class FundRequest(BaseModel):
     amount: float

@@ -21,6 +21,10 @@ users_collection = db["users"]
 fixture_bonds_collection = db["fixture_bonds"]
 bond_requests_collection = db["bond_requests"]
 group_bonds_collection = db["group_bonds"]
+group_offers_collection = db["group_offers"]
+group_proposals_collection = db["group_proposals"]
+other_group_offers_collection = db["other_offers_bonds"]
+other_group_proposals_collection = db["other_proposals_bonds"]
 
 
 MQTT_HOST = os.getenv("MQTT_HOST")
@@ -35,14 +39,14 @@ async def save_fixture(data):
         data = data.strip('"')
         data = data.replace('\\"', '"')
         parsed_data = json.loads(data)
+        print(f"Saving data to MongoDB: {parsed_data}")
         if "fixtures" in parsed_data:
+            print("Saving fixtures...")
             fixtures = parsed_data["fixtures"]
             for fixture in fixtures:
                 result = await collection.insert_one(fixture)
-                print(
-                    f"Fixture saved to MongoDB with id: {
-                        result.inserted_id}")
-                await initialize_fixture_bonds(fixture["fixtures"]["id"])
+                print(f"Fixture saved to MongoDB with id: {result.inserted_id}")
+                await initialize_fixture_bonds(fixture["fixture"]["id"])
         else:
             result = await collection.insert_one(parsed_data)
             print(f"Data saved to MongoDB with id: {result.inserted_id}")
@@ -175,8 +179,9 @@ async def handle_validation(payload):
     is_valid = data.get("valid")
     our_bond = await bonds_collection.find_one({"request_id": request_id})
     other_bond = await bond_requests_collection.find_one({"request_id": request_id})
+    group_bond = await group_bonds_collection.find_one({"request_id": request_id})
 
-    bond_request = our_bond or other_bond
+    bond_request = our_bond or other_bond or group_bond
 
     if not bond_request:
         print(f"No se encontró la solicitud de bono: {request_id}")
@@ -189,6 +194,10 @@ async def handle_validation(payload):
             )
         elif other_bond:
             await bond_requests_collection.update_one(
+                {"request_id": request_id}, {"$set": {"status": "valid"}}
+            )
+        elif group_bond:
+            await group_bonds_collection.update_one(
                 {"request_id": request_id}, {"$set": {"status": "valid"}}
             )
         print(f"Bono validado: {request_id}")
@@ -207,6 +216,10 @@ async def handle_validation(payload):
             )
         elif other_bond:
             await bond_requests_collection.update_one(
+                {"request_id": request_id}, {"$set": {"status": "invalid"}}
+            )
+        elif group_bond:
+            await group_bonds_collection.update_one(
                 {"request_id": request_id}, {"$set": {"status": "invalid"}}
             )
 
@@ -308,8 +321,8 @@ async def handle_auctions(payload):
         quantity = data.get("quantity")
         group_id = data.get("group_id")
 
-        if auction_type == "offer":
-            await bond_requests_collection.insert_one(
+        if auction_type == "offer" and group_id != 8 :
+            await other_group_offers_collection.insert_one(
                 {
                     "auction_id": auction_id,
                     "fixture_id": fixture_id,
@@ -324,38 +337,46 @@ async def handle_auctions(payload):
             )
             print(f"Oferta registrada para la subasta: {auction_id}")
 
-        elif auction_type == "proposal":
-            await bond_requests_collection.insert_one(
-                {
-                    "auction_id": auction_id,
-                    "proposal_id": proposal_id,
-                    "fixture_id": fixture_id,
-                    "league_name": league_name,
-                    "round": round_name,
-                    "result": result,
-                    "quantity": quantity,
-                    "group_id": group_id,
-                    "type": auction_type,
-                    "status": "pending",
-                }
-            )
-            print(f"Propuesta de intercambio registrada: {proposal_id}")
+        elif auction_type == "proposal" :
+            result = await group_offers_collection.find_one( {"auction_id": auction_id} )
+            if result :
+                await other_group_proposals_collection.insert_one(
+                    {
+                        "auction_id": auction_id,
+                        "proposal_id": proposal_id,
+                        "fixture_id": fixture_id,
+                        "league_name": league_name,
+                        "round": round_name,
+                        "result": result,
+                        "quantity": quantity,
+                        "group_id": group_id,
+                        "type": auction_type,
+                        "status": "pending",
+                    }
+                )
+                print(f"Propuesta de intercambio registrada: {proposal_id}")
 
-        elif auction_type in ["acceptance", "rejection"]:
+
+        elif auction_type in ["acceptance", "rejection"] :
             status = "accepted" if auction_type == "acceptance" else "rejected"
-            result = await bond_requests_collection.find_one_and_update(
-                {"proposal_id": proposal_id},
-                {"$set": {"status": status}},
-                return_document=True,
-            )
+            result = await group_proposals_collection.find_one_and_update( {"proposal_id": proposal_id}, {"$set": {"status": status}}, return_document=True )
+            if result :
+                    if status == "accepted" :
+                        print(f"Nuestra propuesta fue aceptada por el otro grupo: {proposal_id}")
+                        await check_and_update_available_bonds(result["fixture_id"], result["quantity"])
+                    else :
+                        print(f"Nuestra propuesta fue rechazada por el otro grupo: {proposal_id}")
+            
+            else :
+                result = await other_group_offers_collection.find_one_and_update( {"auction_id": auction_id}, {"$set": {"status": status}}, return_document=True )
+                if result :
+                    if status == "accepted" :
+                        await check_and_update_available_bonds(result["fixture_id"], result["quantity"])
+                    else :
+                        print(f"Propuesta rechazada: {proposal_id}")
+                else :
+                    print(f"No se encontró la propuesta para el ID: {proposal_id}")
 
-            if result and auction_type == "acceptance":
-                await check_and_update_available_bonds(result["fixture_id"], result["quantity"])
-                print(f"Propuesta aceptada: {proposal_id}")
-            elif result:
-                print(f"Propuesta rechazada: {proposal_id}")
-            else:
-                print(f"No se encontró la propuesta para el ID: {proposal_id}")
         else:
             print(f"Tipo de mensaje desconocido: {auction_type}")
 
@@ -363,7 +384,6 @@ async def handle_auctions(payload):
         print(f"Error decodificando JSON en handle_auctions: {e}")
     except Exception as e:
         print(f"Error en handle_auctions: {e}")
-
 
 
 async def process_bonds_for_fixture(fixture_id, result):
@@ -607,6 +627,37 @@ async def buy_bond_group(auth0_id: str, fixture_id: str, result: str, amount: in
     await update_wallet_balance(auth0_id, -amount * 1000)
 
     return {"message": "Solicitud de compra grupal enviada", "request_id": request_id}
+
+
+async def offer_bonds(fixture_id: str, league_name: str, fixture_round: str, result: str, quantity: int):
+    auction_id = str(uuid.uuid4())
+
+    offer_message = {
+        "auction_id": auction_id,
+        "proposal_id": "",
+        "fixture_id": int(fixture_id),
+        "league": league_name,
+        "round": fixture_round,
+        "result": result,
+        "quantity": quantity,
+        "group_id": 7,
+        "type": "offer",
+    }
+
+    publish.single(
+        "fixtures/auctions",
+        payload=json.dumps(offer_message),
+        hostname=MQTT_HOST,
+        port=MQTT_PORT,
+        auth={"username": MQTT_USER, "password": MQTT_PASSWORD},
+    )
+    group_offers_collection.insert_one(offer_message)
+    offer_message["_id"] = str(offer_message["_id"])
+    
+    print(f"Mensaje enviado al broker: {json.dumps(offer_message)}")
+
+    return {"message": "Oferta de bonos enviada", "auction_id": auction_id}
+
 
 
 async def restore_available_bonds(fixture_id, quantity):
