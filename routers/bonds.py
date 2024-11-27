@@ -56,7 +56,7 @@ async def create_bonds_offer(
     return result
 
 @router.get("/bonds/offered")
-async def get_group_bonds():
+async def get_offered_bonds():
     print("Getting offered bonds...")
     bonds = await other_group_offers_collection.find().to_list(length=None)
     for bond in bonds:
