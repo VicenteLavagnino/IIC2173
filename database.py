@@ -363,7 +363,6 @@ async def handle_auctions(payload):
             if result : # Si es nuestra propuesta
                     if status == "accepted" :
                         print(f"Nuestra propuesta fue aceptada por el otro grupo: {proposal_id}")
-
                         new_bonds = await other_group_offers_collection.find_one_and_update( {"auction_id": auction_id}, {"$set": {"status": status}}, return_document=True )
                         if new_bonds :
                             request_id = str(uuid.uuid4())
@@ -398,14 +397,14 @@ async def handle_auctions(payload):
                         print(f"Nuestra propuesta fue rechazada por el otro grupo: {proposal_id}")
             
             else : # Si es propuesta de otro grupo
-                result = await other_group_offers_collection.find_one_and_update( {"auction_id": auction_id}, {"$set": {"status": status}}, return_document=True )
-                if result :
-                    if status == "accepted" :
-                        await check_and_update_available_bonds(result["fixture_id"], result["quantity"])
+                if status == "accepted" :
+                    result = await other_group_offers_collection.find_one_and_update( {"auction_id": auction_id}, {"$set": {"status": status}}, return_document=True )
+                    if result :
+                        print(f"Propuesta aceptada por otro grupo: {proposal_id}")
                     else :
-                        print(f"Propuesta rechazada: {proposal_id}")
+                        print(f"No se encontró la oferta de otro grupo.")
                 else :
-                    print(f"No se encontró la propuesta para el ID: {proposal_id}")
+                    print(f"Propuesta rechazada: {proposal_id}")
 
         else:
             print(f"Tipo de mensaje desconocido: {auction_type}")
