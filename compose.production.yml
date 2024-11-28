@@ -23,31 +23,21 @@ services:
     ports:
       - "8000:8000"
     environment:
-      # MQTT Variables
       - MQTT_HOST=${MQTT_HOST}
       - MQTT_PORT=${MQTT_PORT}
       - MQTT_USER=${MQTT_USER}
       - MQTT_PASSWORD=${MQTT_PASSWORD}
-      
-      # MongoDB Variables
-      - MONGO_URL=mongodb+srv://vicentelavagnino:vicente1559@e0.dhcuf.mongodb.net/?retryWrites=true&w=majority&appName=E0 
+      - MONGO_URL=${MONGO_URL}
       - MONGO_USERNAME=${MONGO_USERNAME}
       - MONGO_PASSWORD=${MONGO_PASSWORD}
-
-      
-      # Auth0 Variables
       - AUTH0_DOMAIN=${AUTH0_DOMAIN}
       - AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
       - AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET}
       - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
-      - FRONTEND_URL=https://web.e0futbol.me
-      
-      # Celery Variables
+      - FRONTEND_URL=${FRONTEND_URL}
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      
       - PYTHONPATH=/app
-
     tmpfs:
       - /dev/shm:exec,size=128M,mode=1777
     restart: unless-stopped
@@ -68,29 +58,20 @@ services:
       "--loglevel=info"
     ]
     environment:
-      # MQTT Variables
       - MQTT_HOST=${MQTT_HOST}
       - MQTT_PORT=${MQTT_PORT}
       - MQTT_USER=${MQTT_USER}
       - MQTT_PASSWORD=${MQTT_PASSWORD}
-      
-      # MongoDB Variables
-      - MONGO_URL=mongodb+srv://vicentelavagnino:vicente1559@e0.dhcuf.mongodb.net/?retryWrites=true&w=majority&appName=E0 
+      - MONGO_URL=${MONGO_URL}
       - MONGO_USERNAME=${MONGO_USERNAME}
       - MONGO_PASSWORD=${MONGO_PASSWORD}
-      
-      # Auth0 Variables
       - AUTH0_DOMAIN=${AUTH0_DOMAIN}
       - AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
       - AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET}
       - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
-      
-      # Celery Variables
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      
       - PYTHONPATH=/app
-
     tmpfs:
       - /dev/shm:exec,size=128M,mode=1777
     restart: unless-stopped
@@ -113,30 +94,18 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      
-      # MQTT Variables
       - MQTT_HOST=${MQTT_HOST}
       - MQTT_PORT=${MQTT_PORT}
       - MQTT_USER=${MQTT_USER}
       - MQTT_PASSWORD=${MQTT_PASSWORD}
-      
-      # MongoDB Variables
-      - MONGO_URL=mongodb+srv://vicentelavagnino:vicente1559@e0.dhcuf.mongodb.net/?retryWrites=true&w=majority&appName=E0 
+      - MONGO_URL=${MONGO_URL}
       - MONGO_USERNAME=${MONGO_USERNAME}
       - MONGO_PASSWORD=${MONGO_PASSWORD}
-      
-      # Auth0 Variables
       - AUTH0_DOMAIN=${AUTH0_DOMAIN}
       - AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
       - AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET}
       - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
-      
-      # Celery Variables
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-
       - PYTHONPATH=/app
-
     tmpfs:
       - /dev/shm:exec,size=128M,mode=1777
     restart: unless-stopped
@@ -152,25 +121,18 @@ services:
       "mqtt_listener.py"
     ]
     environment:
-      # MQTT Variables
       - MQTT_HOST=${MQTT_HOST}
       - MQTT_PORT=${MQTT_PORT}
       - MQTT_USER=${MQTT_USER}
       - MQTT_PASSWORD=${MQTT_PASSWORD}
-      
-      # MongoDB Variables
-      - MONGO_URL=mongodb+srv://vicentelavagnino:vicente1559@e0.dhcuf.mongodb.net/?retryWrites=true&w=majority&appName=E0 
+      - MONGO_URL=${MONGO_URL}
       - MONGO_USERNAME=${MONGO_USERNAME}
       - MONGO_PASSWORD=${MONGO_PASSWORD}
-      
-      # Auth0 Variables
       - AUTH0_DOMAIN=${AUTH0_DOMAIN}
       - AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}
       - AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET}
       - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
-      
       - PYTHONPATH=/app
-
     tmpfs:
       - /dev/shm:exec,size=128M,mode=1777
     restart: unless-stopped
