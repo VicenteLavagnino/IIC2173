@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Depends
-from models import BondPurchase, BondOffer, BondProposal
+from models import BondPurchase, BondOffer, BondProposal, BondProposalResponse
 from auth import get_current_user
 from fastapi import Body, Depends
-from database import buy_bond, buy_bond_group, group_bonds_collection, offer_bonds, other_group_offers_collection, group_offers_collection, propose_bonds, other_group_proposals_collection, buy_bond_to_group
+from database import buy_bond, buy_bond_group, group_bonds_collection, offer_bonds, other_group_offers_collection, group_offers_collection, propose_bonds, other_group_proposals_collection, buy_bond_to_group, collection, handle_proposal_decision
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
+from bson import ObjectId
 
 router = APIRouter()
 
@@ -84,11 +87,43 @@ async def create_bonds_proposal(
 
 @router.get("/bonds/proposed")
 async def get_proposed_bonds():
-    print("Getting proposed bonds...")
-    bonds = await other_group_proposals_collection.find().to_list(length=None)
-    for bond in bonds:
-        bond["_id"] = str(bond["_id"])
-    print(bonds)
-    return bonds
+    try:
+        print("Getting proposed bonds...")
+        
+        bonds = await other_group_proposals_collection.find().to_list(length=None)
+        result = []
 
-    
+        for bond in bonds:
+            bond["_id"] = str(bond["_id"]) 
+
+            bond_fixture = await collection.find_one({"fixture.id": int(bond["fixture_id"])})
+            encoded_bond_fixture = None
+            if bond_fixture:
+                encoded_bond_fixture = jsonable_encoder(bond_fixture, custom_encoder={ObjectId: str})
+
+            associated_bond = await group_offers_collection.find_one({"auction_id": bond["auction_id"]})
+            encoded_associated_bond_fixture = None
+            if associated_bond:
+                associated_bond["_id"] = str(associated_bond["_id"])
+
+                associated_bond_fixture = await collection.find_one({"fixture.id": int(associated_bond["fixture_id"])})
+                if associated_bond_fixture:
+                    encoded_associated_bond_fixture = jsonable_encoder(associated_bond_fixture, custom_encoder={ObjectId: str})
+
+                    result.append([
+                        [bond, encoded_bond_fixture],
+                        [associated_bond, encoded_associated_bond_fixture],
+                    ])
+        print(result)
+        return JSONResponse(content=result)
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+@router.post("/bonds/proposed") 
+async def post_proposal_decision(
+    proposal_response: BondProposalResponse = Body(...),
+):  
+    result = await handle_proposal_decision(proposal_response.auction_id, proposal_response.proposal_id, proposal_response.proposal_decision)
+    return result

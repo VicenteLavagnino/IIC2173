@@ -26,6 +26,11 @@ class BondProposal(BaseModel):
     result: str
     quantity: int
 
+class BondProposalResponse(BaseModel):
+    auction_id: str
+    proposal_id: str
+    proposal_decision: str
+
 class FundRequest(BaseModel):
     amount: float
 

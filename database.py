@@ -336,8 +336,8 @@ async def handle_auctions(payload):
             print(f"Oferta registrada para la subasta: {auction_id}")
 
         elif auction_type == "proposal" :
-            result = await group_offers_collection.find_one( {"auction_id": auction_id} )
-            if result :
+            our_offer = await group_offers_collection.find_one( {"auction_id": auction_id} )
+            if our_offer :
                 await other_group_proposals_collection.insert_one(
                     {
                         "auction_id": auction_id,
@@ -357,8 +357,8 @@ async def handle_auctions(payload):
 
         elif auction_type in ["acceptance", "rejection"] :
             status = "accepted" if auction_type == "acceptance" else "rejected"
-            result = await group_proposals_collection.find_one_and_update( {"proposal_id": proposal_id}, {"$set": {"status": status}}, return_document=True )
-            if result : # Si es nuestra propuesta
+            our_proposal = await group_proposals_collection.find_one_and_update( {"proposal_id": proposal_id}, {"$set": {"status": status}}, return_document=True )
+            if our_proposal : # Si es nuestra propuesta
                     if status == "accepted" :
                         print(f"Nuestra propuesta fue aceptada por el otro grupo: {proposal_id}")
                         new_bonds = await other_group_offers_collection.find_one_and_update( {"auction_id": auction_id}, {"$set": {"status": status}}, return_document=True )
@@ -396,8 +396,8 @@ async def handle_auctions(payload):
             
             else : # Si es propuesta de otro grupo
                 if status == "accepted" :
-                    result = await other_group_offers_collection.find_one_and_update( {"auction_id": auction_id}, {"$set": {"status": status}}, return_document=True )
-                    if result :
+                    other_offer = await other_group_offers_collection.find_one_and_update( {"auction_id": auction_id}, {"$set": {"status": status}}, return_document=True )
+                    if other_offer :
                         print(f"Propuesta aceptada por otro grupo: {proposal_id}")
                     else :
                         print(f"No se encontró la oferta de otro grupo.")
@@ -715,7 +715,7 @@ async def offer_bonds(fixture_id: str, league_name: str, fixture_round: str, res
             "auction_id": auction_id,
             "proposal_id": "",
             "fixture_id": int(fixture_id),
-            "league": league_name,
+            "league_name": league_name,
             "round": fixture_round,
             "result": result,
             "quantity": quantity,
@@ -802,6 +802,40 @@ async def propose_bonds(auction_id: str, fixture_id: str, league_name: str, fixt
     else:
         print("Hubo un error")
         return {"error": "Hubo un error al proponer el intercambio."}
+    
+
+async def handle_proposal_decision(auction_id: str, proposal_id: str, proposal_decision: str):
+    if proposal_decision == "acceptance" :
+        await group_offers_collection.delete_one({"auction_id": auction_id})
+        other_bond = await other_group_proposals_collection.find_one_and_update( {"proposal_id": proposal_id}, {"$set": {"status": "accepted"}}, return_document=True )
+        if other_bond :
+            request_id = str(uuid.uuid4())
+            await group_bonds_collection.insert_one(
+                {
+                    "request_id": request_id,
+                    "fixture_id": other_bond["fixture_id"],
+                    "league_name": other_bond["league_name"],
+                    "round": other_bond["round"],
+                    "result": other_bond["result"],
+                    "restantes": other_bond["quantity"],
+                    "ofrecidos": 0,
+                    "status": "pending",
+                }
+            )
+            print(f"Propuesta aceptada con éxito: {proposal_id}")
+            return {"message": "Propuesta de intercambio aceptada con éxito.", "proposal_id": proposal_id}
+        else :
+            print(f"No se encontró la propuesta de intercambio: {proposal_id}")
+            return {"error": "No se encontró la propuesta de intercambio."}
+    else :
+        other_bond = await other_group_proposals_collection.find_one_and_update( {"proposal_id": proposal_id}, {"$set": {"status": "rejected"}}, return_document=True )
+        if other_bond :
+            print(f"Propuesta rechazada con éxito: {proposal_id}")
+            return {"message": "Propuesta de intercambio rechazada con éxito.", "proposal_id": proposal_id}
+        else :
+            print(f"No se encontró la propuesta de intercambio: {proposal_id}")
+            return {"error": "No se encontró la propuesta de intercambio."}
+
 
 
 async def restore_available_bonds(fixture_id, quantity):
