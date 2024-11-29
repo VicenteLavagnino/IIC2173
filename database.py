@@ -822,6 +822,27 @@ async def handle_proposal_decision(auction_id: str, proposal_id: str, proposal_d
                     "status": "pending",
                 }
             )
+
+            acceptance_message = {
+                    "auction_id": other_bond["auction_id"],
+                    "proposal_id": proposal_id,
+                    "fixture_id": other_bond["fixture_id"],
+                    "league_name": other_bond["league_name"],
+                    "round": other_bond["round"],
+                    "result": other_bond["result"],
+                    "quantity": other_bond["quantity"],
+                    "group_id": 8,
+                    "type": "acceptance",
+                }
+            
+            publish.single(
+                "fixtures/auctions",
+                payload=json.dumps(acceptance_message),
+                hostname=MQTT_HOST,
+                port=MQTT_PORT,
+                auth={"username": MQTT_USER, "password": MQTT_PASSWORD},
+            )
+            print(f"Mensaje enviado al broker: {json.dumps(acceptance_message)}")
             print(f"Propuesta aceptada con éxito: {proposal_id}")
             return {"message": "Propuesta de intercambio aceptada con éxito.", "proposal_id": proposal_id}
         else :
@@ -830,6 +851,27 @@ async def handle_proposal_decision(auction_id: str, proposal_id: str, proposal_d
     else :
         other_bond = await other_group_proposals_collection.find_one_and_update( {"proposal_id": proposal_id}, {"$set": {"status": "rejected"}}, return_document=True )
         if other_bond :
+            rejection_message = {
+                    "auction_id": other_bond["auction_id"],
+                    "proposal_id": proposal_id,
+                    "fixture_id": other_bond["fixture_id"],
+                    "league_name": other_bond["league_name"],
+                    "round": other_bond["round"],
+                    "result": other_bond["result"],
+                    "quantity": other_bond["quantity"],
+                    "group_id": 8,
+                    "type": "rejection",
+                }
+            
+            publish.single(
+                "fixtures/auctions",
+                payload=json.dumps(rejection_message),
+                hostname=MQTT_HOST,
+                port=MQTT_PORT,
+                auth={"username": MQTT_USER, "password": MQTT_PASSWORD},
+            )
+            
+            print(f"Mensaje enviado al broker: {json.dumps(rejection_message)}")
             print(f"Propuesta rechazada con éxito: {proposal_id}")
             return {"message": "Propuesta de intercambio rechazada con éxito.", "proposal_id": proposal_id}
         else :
