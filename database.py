@@ -367,13 +367,13 @@ async def handle_auctions(payload):
                             await group_bonds_collection.insert_one(
                                 {
                                     "request_id": request_id,
-                                    "fixture_id": new_bonds["fixture_id"],
+                                    "fixture_id": str(new_bonds["fixture_id"]),
                                     "league_name": new_bonds["league_name"],
                                     "round": new_bonds["round"],
                                     "result": new_bonds["result"],
                                     "restantes": new_bonds["quantity"],
                                     "ofrecidos": 0,
-                                    "status": "pending",
+                                    "status": "valid",
                                 }
                             )
                         else :
@@ -383,13 +383,13 @@ async def handle_auctions(payload):
                         await group_bonds_collection.insert_one(
                             {
                                 "request_id": request_id,
-                                "fixture_id": fixture_id,
+                                "fixture_id": str(fixture_id),
                                 "league_name": league_name,
                                 "round": round_name,
                                 "result": result,
                                 "restantes": quantity,
                                 "ofrecidos": 0,
-                                "status": "pending",
+                                "status": "valid",
                             }
                         )
                         print(f"Nuestra propuesta fue rechazada por el otro grupo: {proposal_id}")
@@ -813,7 +813,7 @@ async def handle_proposal_decision(auction_id: str, proposal_id: str, proposal_d
             await group_bonds_collection.insert_one(
                 {
                     "request_id": request_id,
-                    "fixture_id": other_bond["fixture_id"],
+                    "fixture_id": str(other_bond["fixture_id"]),
                     "league_name": other_bond["league_name"],
                     "round": other_bond["round"],
                     "result": other_bond["result"],
