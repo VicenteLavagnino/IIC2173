@@ -14,6 +14,11 @@ En cuanto al uso de inteligencia artificial, se utilizó Chat GPT para la instal
 
 Por otra parte, dentro del repositorio, se utilizó Copilot para la generación de archivos de Dockerfile y compose.yaml, además del parseo de datos en database.py junto con el filtro para la api en main.py.
 
+Otras referencias de herramientas IA utilizadas durante el desarrollo del proyecto:
+- https://chatgpt.com/
+- GitHub Copilot
+- https://claude.ai/
+
 ## Nombre del Dominio
 
 ```bash
